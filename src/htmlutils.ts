@@ -168,4 +168,15 @@ function getRangeVector3(id: string): Vector3 {
     );
 }
 
+/**
+ * toggles HTML element visibility on or off
+ * @param {string} id The id of the control to toggle on/off
+ */
+function toggle(id: string) {
+    let e = document.getElementById(id);
+    if (e) {
+        e.style.display = e.style.display === 'none' ? '' : 'none';
+    }
+}
+
 // END HELPFUL HTML5 CODE

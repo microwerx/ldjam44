@@ -24,11 +24,24 @@
             <button class="startbutton" id="startButton" onclick="start()">Start Game</button>
         </div>
     </div>
-    <hr />
-    <div class="centered funfont">
-            <div id="desc"></div>
-            <div id="controls"></div>
+    <div id="gamecontrols" class="centered funfont">
+            <hr />
+            <div class="gamecontrols">
+            <button class="gamebutton bfeed" onclick="if (game) game.feed()">Feed</button>
+            <button class="gamebutton bwater" onclick="if (game) game.water()">Water</button>
+            <button class="gamebutton bgroom" onclick="if (game) game.groom()">Groom</button>
+            <button class="gamebutton bscatology" onclick="if (game) game.poop()">Scatology</button>
+            <button class="gamebutton bmedicine" onclick="if (game) game.medicine()">Medicine</button>
         </div>
+        <hr />
+        <div id="desc">
+            <h3>Help</h3>
+        </div>
+        <hr />
+        <div id="controls">
+            <h3>Debug</h3>
+        </div>
+    </div>
     <hr />
     <p>Copyright (C) 2019 Jonathan Metzgar</p>
     <!-- <script src="../LibXOR/examples/LibXOR.js"></script> -->

@@ -92,7 +92,7 @@ h2 {
 }
 
 h3 {
-    margin-top: 1em;
+    margin-top: 0em;
     margin-bottom: 0em;
     font-size: 1em;
     font-style: normal;
@@ -144,6 +144,39 @@ em {
 
 .centered {
     margin: auto;
+}
+
+.gamecontrols {
+
+}
+
+.gamebutton {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 2px 4px 0px 0px rgba(0,0,0,1);
+    font-family: sunbeat, sans-serif;
+    font-feature-settings: "dlig" on;
+    font-size: 1em;
+}
+
+.bfeed {
+    background-color: #408040;
+}
+
+.bwater {
+    background-color: #0072e4;
+}
+
+.bgroom {
+    background-color: #e40072;
+}
+
+.bmedicine {
+    background-color: #e47200;
+}
+
+.bscatology {
+    background-color: #d4ab38;
 }
 
 /*

@@ -3683,11 +3683,12 @@ var Fluxions;
             if (unit < 0) {
                 let lastUnit = this.uniformUnits.get(uniform) || 0;
                 t.bindUnit(lastUnit);
+                this.fx.gl.uniform1i(u, lastUnit);
             }
             else {
                 t.bindUnit(unit);
+                this.fx.gl.uniform1i(u, unit);
             }
-            this.fx.gl.uniform1i(u, unit);
         }
         restore() {
             let gl = this.fx.gl;
@@ -5926,10 +5927,14 @@ var XOR;
             if (rescaleCenter)
                 mesh.rescaleCenter.copy(rescaleCenter);
             this.meshes.set(name, mesh);
-            let tl = new XOR.TextFileLoader(url, (data, name, p) => {
+            // let tl = new XOR.TextFileLoader(url, (data: string, name: string, p: number) => {
+            //     let textParser = new FxTextParser(data);
+            //     mesh.loadOBJ(textParser.lines);
+            // });
+            this.xor.textfiles.load(name, url, (data, name, p) => {
                 let textParser = new FxTextParser(data);
                 mesh.loadOBJ(textParser.lines);
-            });
+            }, 0);
             return mesh;
         }
         render(name, rc) {
@@ -6207,6 +6212,16 @@ function getCheckValue(id) {
 function getRangeVector3(id) {
     return Vector3.make(getRangeValue(id + "1"), getRangeValue(id + "2"), getRangeValue(id + "3"));
 }
+/**
+ * toggles HTML element visibility on or off
+ * @param {string} id The id of the control to toggle on/off
+ */
+function toggle(id) {
+    let e = document.getElementById(id);
+    if (e) {
+        e.style.display = e.style.display === 'none' ? '' : 'none';
+    }
+}
 // END HELPFUL HTML5 CODE
 /// <reference path="../../LibXOR/src/LibXOR.ts" />
 /// <reference path="htmlutils.ts" />
@@ -6275,13 +6290,21 @@ class PhysicsObject {
 class GameApp {
     constructor() {
         // controls
-        this.leftright = 0.0;
-        this.updown = 0.0;
+        this.zqsd = false;
+        this.joyMoveX = 0.0;
+        this.joyMoveY = 0.0;
+        this.joyMoveZ = 0.0;
+        this.joyTurnZ = 0.0;
+        this.joyTurnY = 0.0;
+        this.joyTurnX = 0.0;
+        this.joyMove = new Vector3();
+        this.joyTurn = new Vector3();
         this.anybutton = 0.0;
         this.b0 = 0.0;
         this.b1 = 0.0;
         this.b2 = 0.0;
         this.b3 = 0.0;
+        this.loaded = false;
         // camera view
         this.cameraCenter = new Vector3(0, 0, 0);
         this.cameraZoom = 1.0;
@@ -6294,9 +6317,6 @@ class GameApp {
         this.fKdMix = 0.5;
         this.fFurGravity = 0.0;
         this.xor = new LibXOR("project");
-        let p = document.getElementById('desc');
-        if (p)
-            p.innerHTML = `LDJAM44.`;
         this.player = new PhysicsObject();
         this.parrot = new PhysicsObject();
         this.constants = new PhysicsConstants();
@@ -6348,8 +6368,12 @@ class GameApp {
     updateInput(xor) {
         this.syncControls();
         xor.input.poll();
-        this.leftright = 0.0;
-        this.updown = 0.0;
+        this.joyMoveX = 0.0;
+        this.joyMoveY = 0.0;
+        this.joyMoveZ = 0.0;
+        this.joyTurnX = 0.0;
+        this.joyTurnY = 0.0;
+        this.joyTurnZ = 0.0;
         this.anybutton = 0.0;
         // From XBOX ONE / PS4 Controller
         // B0 -> A X        ENTER / JUMP   "SPACE"
@@ -6360,42 +6384,65 @@ class GameApp {
         let b1Keys = ["Escape", "Esc"];
         let b2Keys = ["Control", "ControlLeft", "ControlRight"];
         let b3Keys = ["Enter"];
-        let dirLKeys = ["ArrowLeft", "Left", "A", "a"];
-        let dirRKeys = ["ArrowRight", "Right", "D", "d"];
-        let dirUKeys = ["ArrowUp", "Up", "W", "w"];
-        let dirDKeys = ["ArrowDown", "Down", "S", "s"];
+        // s1 as in stick 1 and s2 as in stick 2
+        let posMoveZKeys = this.zqsd ? ["Z", "z"] : ["W", "w"];
+        let negMoveXKeys = this.zqsd ? ["Q", "q"] : ["A", "a"];
+        let negMoveZKeys = this.zqsd ? ["S", "s"] : ["S", "s"];
+        let posMoveXKeys = this.zqsd ? ["D", "d"] : ["D", "d"];
+        let negTurnZKeys = this.zqsd ? ["A", "a"] : ["Q", "q"];
+        let posTurnZKeys = this.zqsd ? ["E", "e"] : ["E", "e"];
+        let posMoveYKeys = this.zqsd ? ["W", "w"] : ["Z", "z"];
+        let negMoveYKeys = this.zqsd ? ["C", "c"] : ["C", "c"];
+        let negTurnYKeys = ["ArrowLeft", "Left"];
+        let posTurnYKeys = ["ArrowRight", "Right"];
+        let posTurnXKeys = ["ArrowUp", "Up"];
+        let negTurnXKeys = ["ArrowDown", "Down"];
         this.b0 = xor.input.checkKeys(b0Keys) ? 1.0 : 0.0;
         this.b1 = xor.input.checkKeys(b1Keys) ? 1.0 : 0.0;
         this.b2 = xor.input.checkKeys(b2Keys) ? 1.0 : 0.0;
         this.b3 = xor.input.checkKeys(b3Keys) ? 1.0 : 0.0;
-        if (xor.input.checkKeys(dirLKeys)) {
-            this.leftright -= 1.0;
-        }
-        if (xor.input.checkKeys(dirRKeys)) {
-            this.leftright += 1.0;
-        }
-        if (xor.input.checkKeys(dirUKeys)) {
-            this.updown += 1.0;
-        }
-        if (xor.input.checkKeys(dirDKeys)) {
-            this.updown -= 1.0;
-        }
+        if (xor.input.checkKeys(negMoveXKeys))
+            this.joyMoveX -= 1.0;
+        if (xor.input.checkKeys(posMoveXKeys))
+            this.joyMoveX += 1.0;
+        if (xor.input.checkKeys(negMoveZKeys))
+            this.joyMoveZ -= 1.0;
+        if (xor.input.checkKeys(posMoveZKeys))
+            this.joyMoveZ += 1.0;
+        if (xor.input.checkKeys(negMoveYKeys))
+            this.joyMoveY -= 1.0;
+        if (xor.input.checkKeys(posMoveYKeys))
+            this.joyMoveY += 1.0;
+        if (xor.input.checkKeys(negTurnXKeys))
+            this.joyTurnX -= 1.0;
+        if (xor.input.checkKeys(posTurnXKeys))
+            this.joyTurnX += 1.0;
+        if (xor.input.checkKeys(negTurnYKeys))
+            this.joyTurnY -= 1.0;
+        if (xor.input.checkKeys(posTurnYKeys))
+            this.joyTurnY += 1.0;
+        if (xor.input.checkKeys(negTurnZKeys))
+            this.joyTurnZ -= 1.0;
+        if (xor.input.checkKeys(posTurnZKeys))
+            this.joyTurnZ += 1.0;
         this.anybutton = (this.b0 + this.b1 + this.b2 + this.b3) > 0.0 ? 1.0 : 0.0;
         for (let i = 0; i < 4; i++) {
             let gp = xor.input.gamepads.get(i);
             if (!gp || !gp.enabled) {
                 continue;
             }
-            this.updown = gp.updown;
-            this.leftright = gp.leftright;
+            this.joyMoveZ = gp.updown;
+            this.joyMoveX = gp.leftright;
             this.anybutton = (this.anybutton > 0.0 || gp.b0 || gp.b1 || gp.b2 || gp.b3) ? 1.0 : 0.0;
         }
+        this.joyMove.reset(this.joyMoveX, this.joyMoveY, this.joyMoveZ);
+        this.joyTurn.reset(this.joyTurnX, this.joyTurnY, this.joyTurnZ);
     }
     update(dt) {
         let xor = this.xor;
         this.updateInput(xor);
         this.updateGame(xor.dt);
-        this.cameraAzimuth += this.leftright * dt * 25;
+        this.cameraAzimuth += this.joyMoveX * dt * 25;
     }
     resetGame() {
         this.parrot.x.reset(0, -1, 0);
@@ -6408,8 +6455,8 @@ class GameApp {
     }
     updateGame(dt) {
         this.player.accelerations = [
-            GTE.vec3(0.0, -this.updown * this.constants.g * 2, 0.0),
-            GTE.vec3(0.0 * this.leftright * 10.0, 0.0, 0.0),
+            GTE.vec3(0.0, -this.joyMoveZ * this.constants.g * 2, 0.0),
+            GTE.vec3(0.0 * this.joyMoveX * 10.0, 0.0, 0.0),
         ];
         this.player.update(dt, this.constants);
         this.player.bound(-5.0, 5.0, 0.0, 2.0);
@@ -6476,14 +6523,43 @@ class GameApp {
         window.requestAnimationFrame((t) => {
             self.xor.startFrame(t);
             self.update(self.xor.dt);
-            self.render();
+            if (this.loaded) {
+                self.render();
+            }
+            else {
+                if (!this.xor.textfiles.loaded)
+                    this.loaded = false;
+                else if (!this.xor.fx.textures.loaded)
+                    this.loaded = false;
+                else
+                    this.loaded = true;
+            }
             self.mainloop();
         });
     }
+    /* Buttons from main page */
+    feed() {
+        hflog.info("feed");
+    }
+    water() {
+        hflog.info("water");
+    }
+    groom() {
+        hflog.info("groom");
+    }
+    medicine() {
+        hflog.info("medicine");
+    }
+    poop() {
+        hflog.info("poop");
+    }
 }
+var game;
 function start() {
-    let game = new GameApp();
+    game = new GameApp();
     game.init();
     game.start();
+    toggle('gamecontrols');
 }
+toggle('gamecontrols');
 //# sourceMappingURL=game.js.map
