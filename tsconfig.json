@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "target": "es2015",
+        "noImplicitAny": true,
+        "removeComments": false,
+        "preserveConstEnums": true,
+        "strict": true,
+        "outDir": "",
+        "outFile": "./game.js",
+        "sourceMap": true
+    },
+    "include": [
+        "src/game.ts",
+        "../LibXOR/src/LibXOR.ts",
+    ],
+    "exclude": [
+        "node_modules",
+        "**/*.spec.ts",
+        "**/LibXOR.js"
+    ]
+}
