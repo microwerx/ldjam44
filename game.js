@@ -6126,7 +6126,7 @@ class GameApp {
         rc.addTexture("godzilla", "map_kd");
         rc.useDepthTest = false;
         let pal = this.xor.palette;
-        this.xor.meshes.load('rect', 'models/smallrect.obj', null, null);
+        this.xor.meshes.load('rect', 'models/bunny_lores.obj', null, null);
         let bg = this.xor.meshes.create('bg');
         bg.color3(pal.getColor(pal.BROWN));
         bg.rect(-5, -1, 5, -5);
