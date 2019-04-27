@@ -1,26 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <title>LDJAM 44 Game</title> 
-        <meta http-equiv="Content-Type" content="text/html" charset="utf-8">
-        <meta name="description" content="LDJAM 44 Game">
-        <meta name="robots" content="index/nofollow">
-        <meta name="author" content="Jonathan B. Metzgar">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-        <link rel="stylesheet" href="styles.css">
-        </head>
-    <body>
-        <!-- <h1 style="font-family: sunbeat;">Furtual Rabbit</h1> -->
-        <img style="border-radius: 10px;" src="logo.png" alt="Furtual Rabbit" />
-        <p>a game by <em>microwerx</em></p>
+
+<head>
+    <title>LDJAM 44 Game</title>
+    <meta http-equiv="Content-Type" content="text/html" charset="utf-8">
+    <meta name="description" content="LDJAM 44 Game">
+    <meta name="robots" content="index/nofollow">
+    <meta name="author" content="Jonathan B. Metzgar">
+    <meta name="viewport" content="width=device-height, initial-scale=1.0">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- <h1 style="font-family: sunbeat;">Furtual Rabbit</h1> -->
+    <div class="centered"><img class="logo" src="logo.png" alt="Furtual Rabbit" />
+        <h2>a <span class="sunbeat">defurred income</span> game by <a
+                href="https://twitter.com/microwerx_">microwerx</a>
+        </h2>
+    </div>
+    <div class="centered">
         <div id="project">
-            <button id="startButton" onclick="start()">Start Game</button>
+            <button class="startbutton" id="startButton" onclick="start()">Start Game</button>
         </div>
-        <hr/>
-        <div id="desc"></div>
-        <p>Copyright (C) 2019 Jonathan Metzgar</p>
-        <script src="../LibXOR/examples/LibXOR.js"></script>
-        <script src="game.js"></script>
-    </body>
+    </div>
+    <hr />
+    <div class="centered funfont">
+            <div id="desc"></div>
+            <div id="controls"></div>
+        </div>
+    <hr />
+    <p>Copyright (C) 2019 Jonathan Metzgar</p>
+    <!-- <script src="../LibXOR/examples/LibXOR.js"></script> -->
+    <script src="game.js"></script>
+</body>
+
 </html>

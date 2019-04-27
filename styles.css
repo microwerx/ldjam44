@@ -1,8 +1,30 @@
-@import url('assets/fonts/stylesheet.css');
+/* @import url('assets/fonts/stylesheet.css'); */
 
 @font-face {
     font-family: 'sunbeat';
     src: url('webfonts/sunbeat.ttf');
+    font-weight: normal;
+    font-style: normal;
+    font-feature-settings: "dlig" on;
+}
+
+@font-face {
+    font-family: 'comicneue';
+    src: url('webfonts/ComicNeue-Bold.ttf');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'comicneue';
+    src: url('webfonts/ComicNeue-Bold-Oblique.ttf');
+    font-weight: normal;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'rainier';
+    src: url('webfonts/rainier.ttf');
     font-weight: normal;
     font-style: normal;
 }
@@ -10,6 +32,13 @@
 @media screen and (min-width: 640px) {
     body {
         width: 640px;
+        /* width: 6in; */
+    }
+}
+
+@media screen and (min-width: 480px) {
+    body {
+        width: 480px;
         /* width: 6in; */
     }
 }
@@ -24,7 +53,7 @@ html {
 body {
     display: table-cell;
     vertical-align: top;
-    font-family: linlibertine, Georgia, serif;
+    font-family: rainier, comicneue, Georgia, serif;
     line-height: 1.62em;
     margin-left: auto;
     margin-right: auto;
@@ -41,9 +70,9 @@ h4,
 h5,
 h6 {
     /* line-height: 1.0em; */
-    font-family: linbiolinum, Futura, 'Helvetica Neue', Helvetica, sans-serif;
+    font-family: rainier, comicneue, sans-serif;
     margin: 0px;
-    margin-bottom: 0.25em;
+    margin-bottom: 0.5em;
 
     color: #236192;
 }
@@ -57,7 +86,6 @@ h1 {
 }
 
 h2 {
-    margin-top: 2em;
     font-size: 2em;
     font-weight: bold;
     font-style: normal;
@@ -79,6 +107,43 @@ h4 {
 
 em {
     font-style: italic;
+}
+
+.sunbeat {
+    font-family: sunbeat, sans-serif;
+    font-feature-settings: "dlig" on;
+}
+
+.funfont {
+    font-size: 2em;
+}
+
+.logo {
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 10px;
+}
+
+.startbutton {
+    display: inline-block;
+    margin: 1em;
+    padding: 1em;
+    border: none;
+    border-radius: 10px;
+    background-color: #0072e4;
+    color: #FFFFFF;
+    box-shadow: 4px 8px 0px 0px rgba(0,0,0,1);
+    font-family: sunbeat, sans-serif;
+    font-feature-settings: "dlig" on;
+    font-size: 4em;
+}
+
+.startbutton:hover {
+    background-color: #558ec7;
+}
+
+.centered {
+    margin: auto;
 }
 
 /*

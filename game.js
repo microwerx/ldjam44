@@ -3547,6 +3547,7 @@ var Fluxions;
             this.samplerName = samplerName;
             this.texture = null;
             this.sampler = null;
+            this.unit = 0;
         }
         getTexture(fx) {
             if (this.texture)
@@ -3609,6 +3610,7 @@ var Fluxions;
             this._programLinkStatus = false;
             this.uniforms = new Map();
             this.uniformInfo = new Map();
+            this.uniformUnits = new Map();
             this.useDepthTest = true;
             this.depthTest = WebGLRenderingContext.LESS;
             this.depthMask = true;
@@ -3657,23 +3659,35 @@ var Fluxions;
             gl.depthMask(this.depthMask);
             let unit = 0;
             for (let texture of this.textures) {
-                let u = this.uniforms.get(texture.uniformName);
-                if (!u)
-                    continue;
-                let t = fx.textures.get(texture.textureName);
-                if (!t)
-                    continue;
-                gl.activeTexture(gl.TEXTURE0 + unit);
-                gl.bindTexture(t.target, t.texture);
-                gl.texParameteri(t.target, gl.TEXTURE_MIN_FILTER, t.minFilter);
-                gl.texParameteri(t.target, gl.TEXTURE_MIN_FILTER, t.magFilter);
-                gl.texParameteri(t.target, gl.TEXTURE_WRAP_S, t.wrapS);
-                gl.texParameteri(t.target, gl.TEXTURE_WRAP_T, t.wrapT);
-                gl.uniform1i(u, unit);
+                this.bindTextureUniform(texture.uniformName, texture.textureName, unit);
                 unit++;
             }
             this._texturesBound = unit;
             this.fx.fbos.configure(this, unit);
+        }
+        /**
+         *
+         * @param uniform name of the uniform
+         * @param texture name of the texture
+         * @param unit >= 0 the unit, or if unit < 0 the last unit bound by this texture
+         */
+        bindTextureUniform(uniform, texture, unit) {
+            let u = this.uniforms.get(uniform);
+            if (!u)
+                return;
+            if (unit >= 0)
+                this.uniformUnits.set(uniform, unit);
+            let t = this.fx.textures.get(texture);
+            if (!t)
+                return;
+            if (unit < 0) {
+                let lastUnit = this.uniformUnits.get(uniform) || 0;
+                t.bindUnit(lastUnit);
+            }
+            else {
+                t.bindUnit(unit);
+            }
+            this.fx.gl.uniform1i(u, unit);
         }
         restore() {
             let gl = this.fx.gl;
@@ -4391,6 +4405,7 @@ var Fluxions;
             this.magFilter = WebGLRenderingContext.NEAREST;
             this.wrapS = WebGLRenderingContext.REPEAT;
             this.wrapT = WebGLRenderingContext.REPEAT;
+            this.lastUnitBound = 0;
         }
         setMinMagFilter(minFilter, magFilter) {
             switch (minFilter) {
@@ -4425,6 +4440,18 @@ var Fluxions;
                     this.wrapT = wrapT;
                     break;
             }
+        }
+        bindUnit(unit) {
+            if (unit === undefined)
+                return;
+            let gl = this.fx.gl;
+            this.lastUnitBound = unit;
+            gl.activeTexture(gl.TEXTURE0 + unit);
+            gl.bindTexture(this.target, this.texture);
+            gl.texParameteri(this.target, gl.TEXTURE_MIN_FILTER, this.minFilter);
+            gl.texParameteri(this.target, gl.TEXTURE_MIN_FILTER, this.magFilter);
+            gl.texParameteri(this.target, gl.TEXTURE_WRAP_S, this.wrapS);
+            gl.texParameteri(this.target, gl.TEXTURE_WRAP_T, this.wrapT);
         }
         bind() {
             this.fx.gl.bindTexture(this.target, this.texture);
@@ -4603,7 +4630,7 @@ class FxTextParser {
         else if (tokens.length == 3) {
             let index = parseInt(tokens[1]);
             indices[1] = index < 0 ? index : index - 1;
-            index = parseInt(tokens[12]);
+            index = parseInt(tokens[2]);
             indices[2] = index < 0 ? index : index - 1;
         }
         return indices;
@@ -6035,7 +6062,154 @@ class LibXOR {
 }
 /* eslint-disable no-unused-vars, no-unreachable, no-redeclare, no-console, no-empty, no-extra-semi, no-constant-condition */
 /// <reference path="XOR/LibXOR.ts" />
+/* eslint-disable no-unused-vars */
+/* global Vector3 */
+// START HELPFUL HTML5 FUNCTIONS
+/**
+ * Creates a row div with a left and right column. It expects CSS class row, column, left, and right.
+ * @param {string} leftContent
+ * @param {string} rightContent
+ */
+function createRow(leftContent = "", rightContent = "") {
+    let row = document.createElement('div');
+    row.className = 'row';
+    let left = document.createElement('div');
+    left.className = 'column left';
+    left.innerHTML = leftContent;
+    let right = document.createElement('div');
+    right.className = 'column right';
+    right.innerHTML = rightContent;
+    row.appendChild(left);
+    row.appendChild(right);
+    return row;
+}
+/**
+ * createRangeRow creates a row with a range control
+ * @param {HTMLElement} parent The element that should be appended to
+ * @param {string} id The name of the range variable
+ * @param {number} curValue The current value of the range
+ * @param {number} minValue The minimum value of the range
+ * @param {number} maxValue The maximum value of the range
+ * @param {number} stepValue The step of the range control (default 1)
+ * @returns {HTMLElement} The created HTMLElement div
+ */
+function createRangeRow(parent, id, curValue, minValue, maxValue, stepValue = 1, isvector = false) {
+    let lContent = "<div class='column left'><label for='" + id + "'>" + id + "<label></div>";
+    let rContent = "<div class='column right'>";
+    if (!isvector) {
+        rContent += "<input type='range' id='" + id + "' value='" + curValue + "' min='" + minValue + "' max='" + maxValue + "' step='" + stepValue + "' />";
+        rContent += "<label id='" + id + "_value'></label>";
+    }
+    else {
+        rContent += "<input type='range' id='" + id + "1' value='" + curValue + "' min='" + minValue + "' max='" + maxValue + "' step='" + stepValue + "' />";
+        rContent += "<input type='range' id='" + id + "2' value='" + curValue + "' min='" + minValue + "' max='" + maxValue + "' step='" + stepValue + "' />";
+        rContent += "<input type='range' id='" + id + "3' value='" + curValue + "' min='" + minValue + "' max='" + maxValue + "' step='" + stepValue + "' />";
+    }
+    rContent += "</div>";
+    let row = createRow(lContent, rContent);
+    row.id = "row" + id;
+    row.className = "row";
+    parent.appendChild(row);
+}
+/**
+ * createRowButton adds a button to the control list
+ * @param {HTMLElement} parent The parent HTMLElement
+ * @param {string} caption The caption of the button
+ * @param {string} id The name of the button's id
+ * @param {function} callback A callback function if this gets clicked
+ */
+function createButtonRow(parent, id, caption, callback) {
+    let lContent = "<div class='column left'><label for='" + id + "'>" + id + "<label></div>";
+    let rContent = "<div class='column right'>";
+    rContent += "<button id='" + id + "'>" + caption + "</button>";
+    rContent += "</div>";
+    let row = createRow(lContent, rContent);
+    row.id = "row" + id;
+    row.className = "row";
+    parent.appendChild(row);
+    let b = document.getElementById(id);
+    if (b) {
+        b.onclick = callback;
+    }
+}
+/**
+ * createCheckButton adds a button to the control list
+ * @param {HTMLElement} parent The parent HTMLElement
+ * @param {string} id The name of the button's id
+ * @param {boolean} checked Is it checked or not
+ */
+function createCheckRow(parent, id, checked) {
+    let lContent = "<div class='column left'><label for='" + id + "'>" + id + "<label></div>";
+    let rContent = "<div class='column right'>";
+    let c = checked ? " checked" : "";
+    rContent += "<input type='checkbox' id='" + id + "' " + c + "/>";
+    rContent += "</div>";
+    let row = createRow(lContent, rContent);
+    row.id = "row" + id;
+    row.className = "row";
+    parent.appendChild(row);
+}
+/**
+ * createDivButton adds a button to the control list
+ * @param {HTMLElement} parent The parent HTMLElement
+ * @param {string} id The name of the button's id
+ */
+function createDivRow(parent, id) {
+    let lContent = "<div class='column left'><label for='" + id + "'>" + id + "<label></div>";
+    let rContent = "<div class='column right' id='" + id + "'>";
+    rContent += "</div>";
+    let row = createRow(lContent, rContent);
+    row.id = "row" + id;
+    row.className = "row";
+    parent.appendChild(row);
+}
+/**
+ * setDivRowContents
+ * @param {string} id
+ * @param {string} content
+ */
+function setDivRowContents(id, content) {
+    let e = document.getElementById(id);
+    if (!e)
+        return;
+    e.innerHTML = content;
+}
+/**
+ * getRangeValue returns the number of a range control
+ * @param {string} id
+ * @returns {number} the value of the range control or 0
+ */
+function getRangeValue(id) {
+    let e = document.getElementById(id);
+    if (!e)
+        return 0;
+    let l = document.getElementById(id + "_value");
+    if (l)
+        l.innerHTML = e.value;
+    return parseFloat(e.value) * 1.0;
+}
+/**
+ * Returns if control is checked or not
+ * @param {string} id
+ * @returns {boolean}
+ */
+function getCheckValue(id) {
+    let e = document.getElementById(id);
+    if (!e)
+        return false;
+    return e.checked;
+}
+/**
+ * getRangeVector3
+ * @param {string} id The id of the range controls ending with 1, 2, 3. Example: id="sky", we get "sky1", "sky2", etc.
+ * @returns {Vector3} A Vector3 with the values from controls id1, id2, and id3.
+ */
+function getRangeVector3(id) {
+    return Vector3.make(getRangeValue(id + "1"), getRangeValue(id + "2"), getRangeValue(id + "3"));
+}
+// END HELPFUL HTML5 CODE
 /// <reference path="../../LibXOR/src/LibXOR.ts" />
+/// <reference path="htmlutils.ts" />
 class PhysicsConstants {
     constructor() {
         this.Mearth = 5.9722e24;
@@ -6056,8 +6230,8 @@ class PhysicsObject {
         this.m = 62.0; // average human mass
         this.facingDirection = 0;
         this.bbox = new GTE.BoundingBox();
-        this.bbox.add(GTE.vec3(-0.1, -0.1, 0.0));
-        this.bbox.add(GTE.vec3(0.1, 0.1, 0.0));
+        this.bbox.add(GTE.vec3(-5, -5, 0.0));
+        this.bbox.add(GTE.vec3(5, 5, 2.0));
     }
     /**
      * update(dt)
@@ -6095,6 +6269,7 @@ class PhysicsObject {
     bound(minx, maxx, miny, maxy) {
         this.x.x = GTE.clamp(this.x.x, minx, maxx);
         this.x.y = GTE.clamp(this.x.y, miny, maxy);
+        this.x.z = GTE.clamp(this.x.z, minx, maxx);
     }
 }
 class GameApp {
@@ -6107,6 +6282,17 @@ class GameApp {
         this.b1 = 0.0;
         this.b2 = 0.0;
         this.b3 = 0.0;
+        // camera view
+        this.cameraCenter = new Vector3(0, 0, 0);
+        this.cameraZoom = 1.0;
+        this.cameraAzimuth = 0.0;
+        this.sunAz = 45.0;
+        this.sunPitch = 45.0;
+        // fur controls
+        this.iFurNumLayers = 1;
+        this.fFurMaxLength = 1;
+        this.fKdMix = 0.5;
+        this.fFurGravity = 0.0;
         this.xor = new LibXOR("project");
         let p = document.getElementById('desc');
         if (p)
@@ -6120,23 +6306,47 @@ class GameApp {
         this.xor.graphics.setVideoMode(1.5 * 384, 384);
         this.xor.input.init();
         let fx = this.xor.fluxions;
+        fx.textures.load("test", "models/textures/test_texture.png");
+        fx.textures.load("test_normal", "models/textures/test_normal_map_dunes.png");
+        fx.textures.load("fur1", "images/fur1.png");
+        fx.textures.load("furThickness", "models/textures/noise15.png");
+        fx.textures.load("grass", "images/grass.png");
         fx.textures.load("godzilla", "models/textures/godzilla.png");
         fx.textures.load("parrot", "models/textures/parrot.png");
-        let rc = this.xor.renderconfigs.load('default', 'shaders/basic.vert', 'shaders/basic.frag');
-        rc.addTexture("godzilla", "map_kd");
-        rc.useDepthTest = false;
-        let pal = this.xor.palette;
-        this.xor.meshes.load('rect', 'models/bunny_lores.obj', null, null);
-        let bg = this.xor.meshes.create('bg');
-        bg.color3(pal.getColor(pal.BROWN));
-        bg.rect(-5, -1, 5, -5);
-        bg.color3(pal.getColor(pal.YELLOW));
-        bg.circle(2, 1.5, 0.25);
+        let pbr = this.xor.renderconfigs.load('pbr', 'shaders/pbr.vert', 'shaders/pbr.frag');
+        pbr.addTexture("test", "map_kd");
+        pbr.addTexture("test", "map_ks");
+        pbr.addTexture("test", "map_normal");
+        let fur = this.xor.renderconfigs.load('fur', 'shaders/fur.vert', 'shaders/fur.frag');
+        fur.addTexture("test", "map_kd");
+        fur.addTexture("fur1", "FurTexture");
+        fur.addTexture("furThickness", "FurThickness");
+        this.xor.meshes.load('bunny', 'models/bunny_lores.obj', null, null);
+        this.xor.meshes.load('bunnyshell', 'models/bunny_lores_shell.obj', null, null);
+        this.xor.meshes.load('bunnypen', 'models/bunnypen.obj', null, null);
+        this.initControls();
+    }
+    initControls() {
+        let c = document.getElementById('controls');
+        if (!c)
+            return;
+        createRangeRow(c, "fFurMaxLength", 0.1, 0.01, 0.25, 0.001);
+        createRangeRow(c, "fKdMix", 0.25, 0.0, 1.0, 0.1);
+        createRangeRow(c, "iFurNumLayers", 25, 1, 50, 1);
+        createRangeRow(c, "fFurGravity", 0.0, 0.0, 0.1, 0.005);
+    }
+    syncControls() {
+        this.iFurNumLayers = getRangeValue("iFurNumLayers");
+        this.fKdMix = getRangeValue("fKdMix");
+        this.fFurMaxLength = getRangeValue("fFurMaxLength");
+        this.fFurGravity = getRangeValue("fFurGravity");
     }
     start() {
+        this.resetGame();
         this.mainloop();
     }
     updateInput(xor) {
+        this.syncControls();
         xor.input.poll();
         this.leftright = 0.0;
         this.updown = 0.0;
@@ -6185,50 +6395,79 @@ class GameApp {
         let xor = this.xor;
         this.updateInput(xor);
         this.updateGame(xor.dt);
+        this.cameraAzimuth += this.leftright * dt * 25;
     }
     resetGame() {
-        this.parrot.x.reset(2, 0, 0);
-        this.player.x.reset(-2, 0, 0);
+        this.parrot.x.reset(0, -1, 0);
+        this.player.x.reset(0, -1, 0);
+        this.cameraCenter = new Vector3(0, 0, 0);
+        this.cameraZoom = 1.0;
+        this.cameraAzimuth = 0.0;
+        this.sunAz = 45.0;
+        this.sunPitch = 45.0;
     }
     updateGame(dt) {
         this.player.accelerations = [
             GTE.vec3(0.0, -this.updown * this.constants.g * 2, 0.0),
-            GTE.vec3(this.leftright * 10.0, 0.0, 0.0),
+            GTE.vec3(0.0 * this.leftright * 10.0, 0.0, 0.0),
         ];
         this.player.update(dt, this.constants);
-        this.player.bound(-2.0, 2.0, 0.0, 2.0);
+        this.player.bound(-5.0, 5.0, 0.0, 2.0);
         this.parrot.update(dt, this.constants);
-        this.parrot.bound(-2.0, 2.0, 0.0, 1.0);
+        this.parrot.bound(-5.0, 5.0, 0.0, 2.0);
+    }
+    setMaterial(rc, texture, uniform, unit) {
+        rc.bindTextureUniform(uniform, texture, unit);
     }
     render() {
         let xor = this.xor;
         let fx = xor.fx;
         xor.graphics.clear(xor.palette.AZURE);
         let pmatrix = Matrix4.makePerspectiveY(45.0, 1.5, 1.0, 100.0);
-        let cmatrix = Matrix4.makeOrbit(-90, 0, 2.0);
-        let rc = xor.renderconfigs.use('default');
+        let cmatrix = Matrix4.makeOrbit(-90 + this.cameraAzimuth, 30, 3.0);
+        cmatrix.translate(0.0, -0.5, 0.0);
+        let lmatrix = Matrix4.makeOrbit(this.sunAz, this.sunPitch, 1);
+        let rc = xor.renderconfigs.use('pbr');
         if (rc) {
-            rc.uniform1f("map_kd_mix", 0.0);
+            rc.uniform3f("sunDirTo", lmatrix.diag3());
+            this.setMaterial(rc, "grass", "map_kd", -1);
+            rc.uniform1f("map_kd_mix", 0.5);
+            rc.uniform3f("kd", xor.palette.getColor(15));
             rc.uniformMatrix4f('ProjectionMatrix', pmatrix);
             rc.uniformMatrix4f('CameraMatrix', cmatrix);
-            rc.uniformMatrix4f('WorldMatrix', Matrix4.makeIdentity());
-            xor.meshes.render('bg', rc);
-            rc.uniform1f("map_kd_mix", 1.0);
+            rc.uniformMatrix4f('WorldMatrix', Matrix4.makeTranslation(0, 0, 0));
+            xor.meshes.render('bunnypen', rc);
+            rc.uniform1f("map_kd_mix", 0.0);
+            rc.uniform3f("kd", xor.palette.getColor(3));
             // render player
-            let tex = fx.textures.get("godzilla");
-            if (tex)
-                tex.bind();
+            this.setMaterial(rc, "fur1", "FurTexture", -1);
             let m = Matrix4.makeTranslation3(this.player.x);
-            m.scale(this.player.facingDirection > 0 ? -1 : 1, 1, 1);
+            // m.scale(this.player.facingDirection > 0 ? -1 : 1, 1, 1);
             rc.uniformMatrix4f('WorldMatrix', m);
-            xor.meshes.render('rect', rc);
-            tex = fx.textures.get("parrot");
-            if (tex)
-                tex.bind();
-            m = Matrix4.makeTranslation3(this.parrot.x);
-            m.scale(this.parrot.facingDirection > 0 ? -1 : 1, 1, 1);
+            xor.meshes.render('bunny', rc);
+        }
+        rc = xor.renderconfigs.use('fur');
+        if (rc) {
+            rc.uniform3f("sunDirTo", lmatrix.diag3());
+            this.setMaterial(rc, "test", "map_kd", -1);
+            rc.uniform3f("kd", xor.palette.getColor(15));
+            rc.uniformMatrix4f('ProjectionMatrix', pmatrix);
+            rc.uniformMatrix4f('CameraMatrix', cmatrix);
+            rc.uniform1f("map_kd_mix", this.fKdMix);
+            rc.uniform3f("kd", xor.palette.getColor(3));
+            let m = Matrix4.makeTranslation3(this.player.x);
             rc.uniformMatrix4f('WorldMatrix', m);
-            xor.meshes.render('rect', rc);
+            for (let i = 0; i < this.iFurNumLayers; i++) {
+                let curLength = (i + 1) / (this.iFurNumLayers - 1);
+                let displacement = GTE.vec3(0.0, -this.fFurGravity, 0.0).add(GTE.vec3(0.0, 0.0, 0.0));
+                rc.uniform1f("FurMaxLength", this.fFurMaxLength);
+                rc.uniform1f("FurCurLength", curLength);
+                rc.uniform3f("FurDisplacement", displacement);
+                let amount = 0.0; //-0.1 * (this.fFurMaxLength + curLength);
+                let furm = Matrix4.makeTranslation3(this.player.x.add(GTE.vec3(0.0, amount, 0.0)));
+                rc.uniformMatrix4f('WorldMatrix', furm);
+                xor.meshes.render('bunnyshell', rc);
+            }
         }
         xor.renderconfigs.use(null);
     }

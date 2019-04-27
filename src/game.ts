@@ -1,4 +1,5 @@
 /// <reference path="../../LibXOR/src/LibXOR.ts" />
+/// <reference path="htmlutils.ts" />
 
 class PhysicsConstants {
     Mearth = 5.9722e24;
@@ -22,8 +23,8 @@ class PhysicsObject {
     bbox = new GTE.BoundingBox();
 
     constructor() {
-        this.bbox.add(GTE.vec3(-0.1, -0.1, 0.0));
-        this.bbox.add(GTE.vec3(0.1, 0.1, 0.0));
+        this.bbox.add(GTE.vec3(-5, -5, 0.0));
+        this.bbox.add(GTE.vec3(5, 5, 2.0));
     }
 
     /**
@@ -70,6 +71,7 @@ class PhysicsObject {
     bound(minx: number, maxx: number, miny: number, maxy: number) {
         this.x.x = GTE.clamp(this.x.x, minx, maxx);
         this.x.y = GTE.clamp(this.x.y, miny, maxy);
+        this.x.z = GTE.clamp(this.x.z, minx, maxx);
     }
 }
 
@@ -85,6 +87,19 @@ class GameApp {
     b1 = 0.0;
     b2 = 0.0;
     b3 = 0.0;
+
+    // camera view
+    cameraCenter = new Vector3(0, 0, 0);
+    cameraZoom = 1.0;
+    cameraAzimuth = 0.0;
+    sunAz = 45.0;
+    sunPitch = 45.0;
+
+    // fur controls
+    iFurNumLayers = 1;
+    fFurMaxLength = 1;
+    fKdMix = 0.5;
+    fFurGravity = 0.0;
 
     player: PhysicsObject;
     parrot: PhysicsObject;
@@ -107,26 +122,52 @@ class GameApp {
         this.xor.input.init();
 
         let fx = this.xor.fluxions;
+        fx.textures.load("test", "models/textures/test_texture.png");
+        fx.textures.load("test_normal", "models/textures/test_normal_map_dunes.png");
+        fx.textures.load("fur1", "images/fur1.png");
+        fx.textures.load("furThickness", "models/textures/noise15.png");
+        fx.textures.load("grass", "images/grass.png");
         fx.textures.load("godzilla", "models/textures/godzilla.png");
         fx.textures.load("parrot", "models/textures/parrot.png");
-        let rc = this.xor.renderconfigs.load('default', 'shaders/basic.vert', 'shaders/basic.frag');
-        rc.addTexture("godzilla", "map_kd");
-        rc.useDepthTest = false;
+        let pbr = this.xor.renderconfigs.load('pbr', 'shaders/pbr.vert', 'shaders/pbr.frag');
+        pbr.addTexture("test", "map_kd");
+        pbr.addTexture("test", "map_ks");
+        pbr.addTexture("test", "map_normal");
+        let fur = this.xor.renderconfigs.load('fur', 'shaders/fur.vert', 'shaders/fur.frag');
+        fur.addTexture("test", "map_kd");
+        fur.addTexture("fur1", "FurTexture");
+        fur.addTexture("furThickness", "FurThickness");
 
-        let pal = this.xor.palette;        
-        this.xor.meshes.load('rect', 'models/bunny_lores.obj', null, null);
-        let bg = this.xor.meshes.create('bg');
-        bg.color3(pal.getColor(pal.BROWN));
-        bg.rect(-5, -1, 5, -5);
-        bg.color3(pal.getColor(pal.YELLOW));
-        bg.circle(2, 1.5, 0.25);
+        this.xor.meshes.load('bunny', 'models/bunny_lores.obj', null, null);
+        this.xor.meshes.load('bunnyshell', 'models/bunny_lores_shell.obj', null, null);
+        this.xor.meshes.load('bunnypen', 'models/bunnypen.obj', null, null);
+
+        this.initControls();
+    }
+
+    initControls() {
+        let c = <HTMLDivElement>document.getElementById('controls');
+        if (!c) return;
+        createRangeRow(c, "fFurMaxLength", 0.1, 0.01, 0.25, 0.001);
+        createRangeRow(c, "fKdMix", 0.25, 0.0, 1.0, 0.1);
+        createRangeRow(c, "iFurNumLayers", 25, 1, 50, 1);
+        createRangeRow(c, "fFurGravity", 0.0, 0.0, 0.1, 0.005);
+    }
+
+    syncControls() {
+        this.iFurNumLayers = getRangeValue("iFurNumLayers");
+        this.fKdMix = getRangeValue("fKdMix");
+        this.fFurMaxLength = getRangeValue("fFurMaxLength");
+        this.fFurGravity = getRangeValue("fFurGravity");
     }
 
     start() {
+        this.resetGame();
         this.mainloop();
     }
 
     updateInput(xor: LibXOR) {
+        this.syncControls();
         xor.input.poll();
 
         this.leftright = 0.0;
@@ -179,24 +220,33 @@ class GameApp {
         let xor = this.xor;
         this.updateInput(xor);
         this.updateGame(xor.dt);
+
+        this.cameraAzimuth += this.leftright * dt * 25;
     }
 
     resetGame() {
-        this.parrot.x.reset(2, 0, 0);
-        this.player.x.reset(-2, 0, 0);
+        this.parrot.x.reset(0, -1, 0);
+        this.player.x.reset(0, -1, 0);
+        this.cameraCenter = new Vector3(0, 0, 0);
+        this.cameraZoom = 1.0;
+        this.cameraAzimuth = 0.0;
+        this.sunAz = 45.0;
+        this.sunPitch = 45.0;
     }
 
-    updateGame(dt: number) {
+    updateGame(dt: number) {    
         this.player.accelerations = [
             GTE.vec3(0.0, -this.updown * this.constants.g * 2, 0.0),
-            GTE.vec3(this.leftright * 10.0, 0.0, 0.0),
+            GTE.vec3(0.0 * this.leftright * 10.0, 0.0, 0.0),
         ];
         this.player.update(dt, this.constants);
-        this.player.bound(-2.0, 2.0, 0.0, 2.0);
+        this.player.bound(-5.0, 5.0, 0.0, 2.0);
         this.parrot.update(dt, this.constants);
-        this.parrot.bound(-2.0, 2.0, 0.0, 1.0);
+        this.parrot.bound(-5.0, 5.0, 0.0, 2.0);
+    }
 
-
+    setMaterial(rc: Fluxions.FxRenderConfig, texture: string, uniform: string, unit: number) {
+        rc.bindTextureUniform(uniform, texture, unit);
     }
 
     render() {
@@ -205,31 +255,57 @@ class GameApp {
         xor.graphics.clear(xor.palette.AZURE);
 
         let pmatrix = Matrix4.makePerspectiveY(45.0, 1.5, 1.0, 100.0);
-        let cmatrix = Matrix4.makeOrbit(-90, 0, 2.0);
-        let rc = xor.renderconfigs.use('default');
+        let cmatrix = Matrix4.makeOrbit(-90 + this.cameraAzimuth, 30, 3.0);
+        cmatrix.translate(0.0, -0.5, 0.0);
+        let lmatrix = Matrix4.makeOrbit(this.sunAz, this.sunPitch, 1);
+
+        let rc = xor.renderconfigs.use('pbr');
         if (rc) {
-            rc.uniform1f("map_kd_mix", 0.0);
+            rc.uniform3f("sunDirTo", lmatrix.diag3());
+            this.setMaterial(rc, "grass", "map_kd", -1);
+            rc.uniform1f("map_kd_mix", 0.5);
+            rc.uniform3f("kd", xor.palette.getColor(15));
             rc.uniformMatrix4f('ProjectionMatrix', pmatrix);
             rc.uniformMatrix4f('CameraMatrix', cmatrix);
-            rc.uniformMatrix4f('WorldMatrix', Matrix4.makeIdentity());
-            xor.meshes.render('bg', rc);
+            rc.uniformMatrix4f('WorldMatrix', Matrix4.makeTranslation(0, 0, 0));
+            xor.meshes.render('bunnypen', rc);
 
-            rc.uniform1f("map_kd_mix", 1.0);
+            rc.uniform1f("map_kd_mix", 0.0);
+            rc.uniform3f("kd", xor.palette.getColor(3));
 
             // render player
-            let tex = fx.textures.get("godzilla");
-            if (tex) tex.bind();
+            this.setMaterial(rc, "fur1", "FurTexture", -1);
             let m = Matrix4.makeTranslation3(this.player.x);
-            m.scale(this.player.facingDirection > 0 ? -1 : 1, 1, 1);
+            // m.scale(this.player.facingDirection > 0 ? -1 : 1, 1, 1);
             rc.uniformMatrix4f('WorldMatrix', m);
-            xor.meshes.render('rect', rc);
+            xor.meshes.render('bunny', rc);
+        }
 
-            tex = fx.textures.get("parrot");
-            if (tex) tex.bind();
-            m = Matrix4.makeTranslation3(this.parrot.x);
-            m.scale(this.parrot.facingDirection > 0 ? -1 : 1, 1, 1);
+        rc = xor.renderconfigs.use('fur');
+        if (rc) {
+            rc.uniform3f("sunDirTo", lmatrix.diag3());
+            this.setMaterial(rc, "test", "map_kd", -1);
+            rc.uniform3f("kd", xor.palette.getColor(15));
+            rc.uniformMatrix4f('ProjectionMatrix', pmatrix);
+            rc.uniformMatrix4f('CameraMatrix', cmatrix);
+            rc.uniform1f("map_kd_mix", this.fKdMix);
+            rc.uniform3f("kd", xor.palette.getColor(3));
+
+            let m = Matrix4.makeTranslation3(this.player.x);
             rc.uniformMatrix4f('WorldMatrix', m);
-            xor.meshes.render('rect', rc);
+
+            for (let i = 0; i < this.iFurNumLayers; i++) {
+                let curLength = (i + 1) / (this.iFurNumLayers - 1);
+                let displacement = GTE.vec3(0.0, -this.fFurGravity, 0.0).add(GTE.vec3(0.0, 0.0, 0.0));
+                rc.uniform1f("FurMaxLength", this.fFurMaxLength);
+                rc.uniform1f("FurCurLength", curLength);
+                rc.uniform3f("FurDisplacement", displacement);
+                let amount = 0.0;//-0.1 * (this.fFurMaxLength + curLength);
+                let furm = Matrix4.makeTranslation3(this.player.x.add(GTE.vec3(0.0, amount, 0.0)));
+               
+                rc.uniformMatrix4f('WorldMatrix', furm);
+                xor.meshes.render('bunnyshell', rc);
+            }
         }
         xor.renderconfigs.use(null);
     }
