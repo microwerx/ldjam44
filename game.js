@@ -6337,6 +6337,11 @@ class PhysicsObject {
         this.bbox.add(GTE.vec3(-4.5, -4.5, 0.0));
         this.bbox.add(GTE.vec3(4.5, 4.5, 2.0));
     }
+    reset(x, y, z) {
+        this.worldMatrix.m14 = x;
+        this.worldMatrix.m24 = y;
+        this.worldMatrix.m34 = z;
+    }
     /**
      * update(dt)
      * @param {number} dt time in seconds elapsed since the last call
@@ -6401,22 +6406,67 @@ function smootherstep(x) {
 class GameData {
     constructor(t0) {
         this.t0 = t0;
+        this.hungry = 0.5;
+        this.food = 10.0;
+        this.thirsty = 0.5;
+        this.water = 1;
         this.fur = 0.0;
         this.curFur = 0;
         this.maxFur = 5;
-        this.food = 0.0;
-        this.money = 10.0;
+        this.furCollected = 0;
+        this.poop = 1.0;
         this.papayaChews = 10;
+        this.health = 1.0;
+        this.vegetables = 10;
+        this.money = 10.0;
         this.days = 0;
         this.t1 = 0;
+        this.gameSpeed = 5;
         this.t1 = t0;
     }
-    update(dt) {
+    update(t1, dt) {
+        if (t1 < this.t0)
+            return;
         this.t1 += dt;
         this.days = this.t1 - this.t0;
         let amount = 1 - smootherstep(this.curFur);
-        this.curFur += dt * amount;
+        this.curFur += dt * amount / 90.0 * this.gameSpeed;
         this.fur = this.curFur * this.maxFur;
+    }
+    feedHay() {
+        let foodAmount = 1;
+        this.hungry = sigmoid(this.hungry + foodAmount);
+        this.food -= foodAmount;
+    }
+    groom() {
+        let groomAmount = 0.1;
+        let before = this.curFur;
+        this.curFur = GTE.clamp(this.curFur - groomAmount, 0, 1);
+        this.furCollected += before - this.curFur;
+    }
+    sell() {
+        let quality = 1;
+        let sellingRate = 13 + Math.sin(this.t1);
+        this.money += quality * this.furCollected * sellingRate;
+        this.furCollected = 0;
+    }
+    giveWater() {
+        throw new Error("Method not implemented.");
+    }
+    giveVeggies() {
+        throw new Error("Method not implemented.");
+    }
+    giveTreats() {
+        let quality = 1;
+        let amount = Math.min(0.1 * this.vegetables);
+        this.vegetables -= amount;
+        this.health = GTE.clamp(this.health + amount * quality, 0, 1);
+    }
+    brushBunny() {
+        throw new Error("Method not implemented.");
+    }
+    cleanArea() {
+        throw new Error("Method not implemented.");
     }
 }
 class GameApp {
@@ -6471,6 +6521,8 @@ class GameApp {
         fx.textures.load("grass", "images/grass.png");
         fx.textures.load("godzilla", "models/textures/godzilla.png");
         fx.textures.load("parrot", "models/textures/parrot.png");
+        let gui = this.xor.renderconfigs.load('gui', 'shaders/basic.vert', 'shaders/basic.frag');
+        gui.useDepthTest = false;
         let pbr = this.xor.renderconfigs.load('pbr', 'shaders/pbr.vert', 'shaders/pbr.frag');
         pbr.addTexture("test", "map_kd");
         pbr.addTexture("test", "map_ks");
@@ -6490,7 +6542,7 @@ class GameApp {
             return;
         createRangeRow(c, "fFurMaxLength", 0.1, 0.01, 0.25, 0.001);
         createRangeRow(c, "fKdMix", 0.25, 0.0, 1.0, 0.1);
-        createRangeRow(c, "iFurNumLayers", 25, 1, 50, 1);
+        createRangeRow(c, "iFurNumLayers", 50, 1, 50, 1);
         createRangeRow(c, "fFurGravity", 0.0, 0.0, 0.1, 0.005);
     }
     syncControls() {
@@ -6580,21 +6632,21 @@ class GameApp {
         let xor = this.xor;
         this.updateInput(xor);
         this.updatePlayer(dt);
-        this.updateGame(xor.dt);
+        this.updateGame();
         //this.cameraAzimuth += this.joyTurnY * dt * 25;
     }
     reset() {
         this.xor.t0 = this.xor.t1;
-        this.game = new GameData(this.xor.t1);
-        this.player.x.reset(0, -1, 0);
+        this.game = new GameData(this.xor.t1 + 5);
+        this.player.reset(0, 3, 0);
         this.cameraCenter = new Vector3(0, 0, 0);
         this.cameraZoom = 1.0;
         this.cameraAzimuth = 0.0;
         this.sunAz = 45.0;
         this.sunPitch = 45.0;
     }
-    updateGame(dt) {
-        this.game.update(dt);
+    updateGame() {
+        this.game.update(this.xor.t1, this.xor.dt);
     }
     updatePlayer(dt) {
         const turnSpeed = 50;
@@ -6619,6 +6671,32 @@ class GameApp {
     }
     setMaterial(rc, texture, uniform, unit) {
         rc.bindTextureUniform(uniform, texture, unit);
+    }
+    renderBar(mesh, value, color, x, w) {
+        mesh.color3(this.xor.palette.calcColor(color, 0, 4, 0, 0, 0));
+        // mesh.rect(x, 0, x + 10, 100);
+        mesh.color3(this.xor.palette.calcColor(color, 0, 0, 0, 0, 0));
+        mesh.rect(x, 0, x + 10, value * 100);
+    }
+    rendergui() {
+        let xor = this.xor;
+        let mesh = new Fluxions.FxIndexedGeometryMesh(this.xor.fx);
+        let w = 10;
+        this.renderBar(mesh, this.game.hungry, 15, w * 0, w);
+        this.renderBar(mesh, this.game.thirsty, 8, w * 1, w);
+        this.renderBar(mesh, this.game.curFur, 12, w * 2, w);
+        this.renderBar(mesh, this.game.money / 100, 13, xor.graphics.width - w * 1, w);
+        this.renderBar(mesh, this.game.food / 100, 13, xor.graphics.width - w * 2, w);
+        let pmatrix = Matrix4.makeOrtho2D(0, xor.graphics.width, 0, xor.graphics.height);
+        let cmatrix = Matrix4.makeIdentity();
+        let rc = xor.renderconfigs.use('gui');
+        if (rc) {
+            rc.uniformMatrix4f('ProjectionMatrix', pmatrix);
+            rc.uniformMatrix4f('CameraMatrix', cmatrix);
+            rc.uniformMatrix4f('WorldMatrix', Matrix4.makeTranslation(0, 0, 0));
+            mesh.render(rc, xor.fx.scenegraph);
+            rc.restore();
+        }
     }
     render() {
         let xor = this.xor;
@@ -6659,7 +6737,8 @@ class GameApp {
             rc.uniformMatrix4f('WorldMatrix', m);
             for (let i = 0; i < this.iFurNumLayers; i++) {
                 let curLength = (i + 1) / (this.iFurNumLayers - 1);
-                let displacement = GTE.vec3(0.0, -this.fFurGravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
+                let gravity = 0.05 * this.game.curFur; //-this.fFurGravity;
+                let displacement = GTE.vec3(0.0, gravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
                 rc.uniform1f("FurMaxLength", this.fFurMaxLength * this.game.fur);
                 rc.uniform1f("FurCurLength", curLength);
                 rc.uniform3f("FurDisplacement", displacement);
@@ -6668,6 +6747,7 @@ class GameApp {
             }
         }
         xor.renderconfigs.use(null);
+        this.rendergui();
     }
     mainloop() {
         let self = this;
@@ -6680,19 +6760,30 @@ class GameApp {
     }
     /* Buttons from main page */
     feed() {
-        hflog.info("feed");
+        this.game.feedHay();
+        hflog.info("food/hungry: " + this.game.food + ", " + this.game.hungry);
     }
     water() {
-        hflog.info("water");
+        this.game.giveWater();
     }
     groom() {
-        hflog.info("groom");
+        this.game.groom();
+        hflog.info("fur: " + this.game.curFur);
     }
-    medicine() {
-        hflog.info("medicine");
+    giveVeggies() {
+        this.game.giveVeggies();
     }
-    poop() {
-        hflog.info("poop");
+    giveTreats() {
+        this.game.giveTreats();
+    }
+    brushBunny() {
+        this.game.brushBunny();
+    }
+    cleanArea() {
+        this.game.cleanArea();
+    }
+    sell() {
+        this.game.sell();
     }
 }
 var game;

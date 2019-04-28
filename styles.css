@@ -151,6 +151,7 @@ em {
 }
 
 .gamebutton {
+    margin-bottom: 0.2em;
     border: none;
     border-radius: 10px;
     box-shadow: 2px 4px 0px 0px rgba(0,0,0,1);
@@ -171,12 +172,16 @@ em {
     background-color: #e40072;
 }
 
-.bmedicine {
+.bveggies {
     background-color: #e47200;
 }
 
-.bscatology {
+.bclean {
     background-color: #d4ab38;
+}
+
+.btreats {
+    background-color: #00ff00;
 }
 
 /*
