@@ -1594,11 +1594,11 @@ var GTE;
         return p2.sub(p1).norm();
     }
     GTE.dirTo3 = dirTo3;
-    function vec3(x, y, z) {
+    function vec3(x = 0, y = 0, z = 0) {
         return new Vector3(x, y, z);
     }
     GTE.vec3 = vec3;
-    function vec4(x, y, z, w) {
+    function vec4(x = 0, y = 0, z = 0, w = 1) {
         return new Vector4(x, y, z, w);
     }
     GTE.vec4 = vec4;
@@ -2742,9 +2742,49 @@ var XOR;
     }
     XOR.XORGamepadState = XORGamepadState;
 })(XOR || (XOR = {}));
+var XOR;
+(function (XOR) {
+    class TouchState {
+        constructor(x = 0, y = 0, dx = 0, dy = 0) {
+            this.x = x;
+            this.y = y;
+            this.dx = dx;
+            this.dy = dy;
+            this.ox = 0;
+            this.oy = 0;
+            this.pressed = false;
+        }
+        get position() {
+            return new Vector3(this.x, this.y);
+        }
+        get reldelta() {
+            return new Vector3(this.dx, this.dy);
+        }
+        get touchDelta() {
+            return new Vector3(this.x - this.ox, this.y - this.oy);
+        }
+        handleTouch(t, down, reset = false) {
+            if (reset) {
+                this.dx = 0;
+                this.dy = 0;
+                this.ox = t.clientX;
+                this.oy = t.clientY;
+            }
+            else {
+                this.dx = t.clientX - this.x;
+                this.dy = t.clientY - this.y;
+            }
+            this.x = t.clientX;
+            this.y = t.clientY;
+            this.pressed = down;
+        }
+    }
+    XOR.TouchState = TouchState;
+})(XOR || (XOR = {}));
 /// <reference path="LibXOR.ts" />
 /// <reference path="XorMouseEvent.ts" />
 /// <reference path="XorGamepadState.ts" />
+/// <reference path="XorTouchState.ts" />
 var XOR;
 (function (XOR) {
     class InputSystem {
@@ -2764,6 +2804,13 @@ var XOR;
             /** @type {Map<number, XORGamepadState>} */
             this.gamepads = new Map();
             this.gamepadAPI = false;
+            this.touches = [
+                new XOR.TouchState(),
+                new XOR.TouchState(),
+                new XOR.TouchState(),
+                new XOR.TouchState(),
+                new XOR.TouchState()
+            ];
         }
         init() {
             let self = this;
@@ -2839,6 +2886,47 @@ var XOR;
             this.canvas.onmouseleave = (e) => {
                 self.mouseOver = false;
             };
+            this.captureTouches();
+        }
+        captureTouches() {
+            if (!this.canvas) {
+                hflog.error("Cannot register touches");
+                return;
+            }
+            let self = this;
+            this.canvas.addEventListener('touchstart', (ev) => {
+                if (ev.targetTouches.length > 0) {
+                    ev.preventDefault();
+                }
+                for (let i = 0; i < self.touches.length; i++) {
+                    if (i < ev.targetTouches.length)
+                        self.touches[i].handleTouch(ev.targetTouches[i], true, true);
+                    else
+                        self.touches[i].handleTouch(ev.targetTouches[i], false, true);
+                }
+            });
+            this.canvas.addEventListener('touchend', (ev) => {
+                if (ev.targetTouches.length > 0) {
+                    ev.preventDefault();
+                }
+                for (let i = 0; i < self.touches.length; i++) {
+                    if (i < ev.targetTouches.length)
+                        self.touches[i].handleTouch(ev.targetTouches[i], true, false);
+                    else
+                        self.touches[i].handleTouch(ev.targetTouches[i], false, false);
+                }
+            });
+            this.canvas.addEventListener('touchmove', (ev) => {
+                if (ev.targetTouches.length > 0) {
+                    ev.preventDefault();
+                }
+                for (let i = 0; i < self.touches.length; i++) {
+                    if (i < ev.targetTouches.length)
+                        self.touches[i].handleTouch(ev.targetTouches[i], true, false);
+                    else
+                        self.touches[i].handleTouch(ev.targetTouches[i], false, false);
+                }
+            });
         }
         checkKeys(keys) {
             for (let key of keys) {
@@ -6245,8 +6333,9 @@ class PhysicsObject {
         this.m = 62.0; // average human mass
         this.facingDirection = 0;
         this.bbox = new GTE.BoundingBox();
-        this.bbox.add(GTE.vec3(-5, -5, 0.0));
-        this.bbox.add(GTE.vec3(5, 5, 2.0));
+        this.worldMatrix = Matrix4.makeIdentity();
+        this.bbox.add(GTE.vec3(-4.5, -4.5, 0.0));
+        this.bbox.add(GTE.vec3(4.5, 4.5, 2.0));
     }
     /**
      * update(dt)
@@ -6254,6 +6343,7 @@ class PhysicsObject {
      * @param {PhysicsConstants} constants standard constants for physics calculations
      */
     update(dt, constants) {
+        this.x = this.worldMatrix.col3(3);
         this.a = GTE.vec3(0.0, 0.0, 0.0);
         for (let i = 0; i < this.accelerations.length; i++) {
             this.a.accum(this.accelerations[i], 1.0);
@@ -6273,6 +6363,9 @@ class PhysicsObject {
             this.facingDirection = 1;
         }
         this.x.accum(this.v, dt);
+        this.worldMatrix.m14 = this.x.x;
+        this.worldMatrix.m24 = this.x.y;
+        this.worldMatrix.m34 = this.x.z;
     }
     /**
      *
@@ -6282,9 +6375,48 @@ class PhysicsObject {
      * @param {number} maxy maximum y world coordinates
      */
     bound(minx, maxx, miny, maxy) {
+        this.x = this.worldMatrix.transform3(GTE.vec3());
+        this.worldMatrix.translate(-this.x.x, -this.x.y, -this.x.z);
         this.x.x = GTE.clamp(this.x.x, minx, maxx);
         this.x.y = GTE.clamp(this.x.y, miny, maxy);
         this.x.z = GTE.clamp(this.x.z, minx, maxx);
+        this.worldMatrix.m14 = this.x.x;
+        this.worldMatrix.m24 = this.x.y;
+        this.worldMatrix.m34 = this.x.z;
+    }
+    get position() {
+        return this.worldMatrix.col3(3);
+    }
+}
+function sigmoid(x) {
+    return 1 / (1 + Math.exp(-x));
+}
+function smootherstep(x) {
+    if (x <= 0)
+        return 0;
+    if (x >= 1)
+        return 1;
+    return 6 * Math.pow(x, 5) - 15 * Math.pow(x, 4) + 10 * Math.pow(x, 3);
+}
+class GameData {
+    constructor(t0) {
+        this.t0 = t0;
+        this.fur = 0.0;
+        this.curFur = 0;
+        this.maxFur = 5;
+        this.food = 0.0;
+        this.money = 10.0;
+        this.papayaChews = 10;
+        this.days = 0;
+        this.t1 = 0;
+        this.t1 = t0;
+    }
+    update(dt) {
+        this.t1 += dt;
+        this.days = this.t1 - this.t0;
+        let amount = 1 - smootherstep(this.curFur);
+        this.curFur += dt * amount;
+        this.fur = this.curFur * this.maxFur;
     }
 }
 class GameApp {
@@ -6304,7 +6436,6 @@ class GameApp {
         this.b1 = 0.0;
         this.b2 = 0.0;
         this.b3 = 0.0;
-        this.loaded = false;
         // camera view
         this.cameraCenter = new Vector3(0, 0, 0);
         this.cameraZoom = 1.0;
@@ -6320,6 +6451,13 @@ class GameApp {
         this.player = new PhysicsObject();
         this.parrot = new PhysicsObject();
         this.constants = new PhysicsConstants();
+    }
+    get loaded() {
+        if (!this.xor.textfiles.loaded)
+            return false;
+        else if (!this.xor.fx.textures.loaded)
+            return false;
+        return true;
     }
     init() {
         hflog.logElement = "log";
@@ -6362,7 +6500,7 @@ class GameApp {
         this.fFurGravity = getRangeValue("fFurGravity");
     }
     start() {
-        this.resetGame();
+        this.reset();
         this.mainloop();
     }
     updateInput(xor) {
@@ -6441,11 +6579,13 @@ class GameApp {
     update(dt) {
         let xor = this.xor;
         this.updateInput(xor);
+        this.updatePlayer(dt);
         this.updateGame(xor.dt);
-        this.cameraAzimuth += this.joyMoveX * dt * 25;
+        //this.cameraAzimuth += this.joyTurnY * dt * 25;
     }
-    resetGame() {
-        this.parrot.x.reset(0, -1, 0);
+    reset() {
+        this.xor.t0 = this.xor.t1;
+        this.game = new GameData(this.xor.t1);
         this.player.x.reset(0, -1, 0);
         this.cameraCenter = new Vector3(0, 0, 0);
         this.cameraZoom = 1.0;
@@ -6454,14 +6594,28 @@ class GameApp {
         this.sunPitch = 45.0;
     }
     updateGame(dt) {
+        this.game.update(dt);
+    }
+    updatePlayer(dt) {
+        const turnSpeed = 50;
         this.player.accelerations = [
             GTE.vec3(0.0, -this.joyMoveZ * this.constants.g * 2, 0.0),
             GTE.vec3(0.0 * this.joyMoveX * 10.0, 0.0, 0.0),
         ];
         this.player.update(dt, this.constants);
-        this.player.bound(-5.0, 5.0, 0.0, 2.0);
-        this.parrot.update(dt, this.constants);
-        this.parrot.bound(-5.0, 5.0, 0.0, 2.0);
+        this.player.bound(-4.5, 4.5, 0.0, 2.0);
+        // this.player.worldMatrix.rotate(turnSpeed * this.joyTurnX * dt, 1, 0, 0);
+        this.player.worldMatrix.rotate(turnSpeed * this.joyTurnY * dt, 0, 1, 0);
+        // this.player.worldMatrix.rotate(turnSpeed * this.joyTurnZ * dt, 0, 0, 1);
+        this.player.worldMatrix.translate3(this.joyMove.scale(dt));
+        let t = this.xor.input.touches[0];
+        if (t.pressed) {
+            this.player.worldMatrix.rotate(turnSpeed * t.dx * dt, 0, 1, 0);
+            this.player.worldMatrix.translate(0, 0, -t.dy * dt);
+            t.dx = 0;
+            t.dy = 0;
+        }
+        this.player.x.reset();
     }
     setMaterial(rc, texture, uniform, unit) {
         rc.bindTextureUniform(uniform, texture, unit);
@@ -6473,6 +6627,7 @@ class GameApp {
         let pmatrix = Matrix4.makePerspectiveY(45.0, 1.5, 1.0, 100.0);
         let cmatrix = Matrix4.makeOrbit(-90 + this.cameraAzimuth, 30, 3.0);
         cmatrix.translate(0.0, -0.5, 0.0);
+        cmatrix = Matrix4.makeLookAt(GTE.vec3(0, 2, 6), this.player.position, GTE.vec3(0, 1, 0));
         let lmatrix = Matrix4.makeOrbit(this.sunAz, this.sunPitch, 1);
         let rc = xor.renderconfigs.use('pbr');
         if (rc) {
@@ -6488,9 +6643,7 @@ class GameApp {
             rc.uniform3f("kd", xor.palette.getColor(3));
             // render player
             this.setMaterial(rc, "fur1", "FurTexture", -1);
-            let m = Matrix4.makeTranslation3(this.player.x);
-            // m.scale(this.player.facingDirection > 0 ? -1 : 1, 1, 1);
-            rc.uniformMatrix4f('WorldMatrix', m);
+            rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);
             xor.meshes.render('bunny', rc);
         }
         rc = xor.renderconfigs.use('fur');
@@ -6506,13 +6659,11 @@ class GameApp {
             rc.uniformMatrix4f('WorldMatrix', m);
             for (let i = 0; i < this.iFurNumLayers; i++) {
                 let curLength = (i + 1) / (this.iFurNumLayers - 1);
-                let displacement = GTE.vec3(0.0, -this.fFurGravity, 0.0).add(GTE.vec3(0.0, 0.0, 0.0));
-                rc.uniform1f("FurMaxLength", this.fFurMaxLength);
+                let displacement = GTE.vec3(0.0, -this.fFurGravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
+                rc.uniform1f("FurMaxLength", this.fFurMaxLength * this.game.fur);
                 rc.uniform1f("FurCurLength", curLength);
                 rc.uniform3f("FurDisplacement", displacement);
-                let amount = 0.0; //-0.1 * (this.fFurMaxLength + curLength);
-                let furm = Matrix4.makeTranslation3(this.player.x.add(GTE.vec3(0.0, amount, 0.0)));
-                rc.uniformMatrix4f('WorldMatrix', furm);
+                rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);
                 xor.meshes.render('bunnyshell', rc);
             }
         }
@@ -6523,17 +6674,7 @@ class GameApp {
         window.requestAnimationFrame((t) => {
             self.xor.startFrame(t);
             self.update(self.xor.dt);
-            if (this.loaded) {
-                self.render();
-            }
-            else {
-                if (!this.xor.textfiles.loaded)
-                    this.loaded = false;
-                else if (!this.xor.fx.textures.loaded)
-                    this.loaded = false;
-                else
-                    this.loaded = true;
-            }
+            self.render();
             self.mainloop();
         });
     }
@@ -6555,11 +6696,23 @@ class GameApp {
     }
 }
 var game;
+var trystartfn;
 function start() {
     game = new GameApp();
     game.init();
-    game.start();
     toggle('gamecontrols');
+    trystartfn = setInterval(() => {
+        trystart();
+    }, 250);
+}
+function trystart() {
+    if (!game.loaded) {
+        hflog.info("loading!");
+        return;
+    }
+    hflog.info("starting!");
+    clearInterval(trystartfn);
+    game.start();
 }
 toggle('gamecontrols');
 //# sourceMappingURL=game.js.map
