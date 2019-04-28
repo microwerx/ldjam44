@@ -26,6 +26,7 @@ class GameApp {
     b2 = 0.0;
     b3 = 0.0;
     game!: GameLogic;
+    grave = false;
 
     get loaded(): boolean {
         if (!this.xor.textfiles.loaded) return false;
@@ -89,6 +90,7 @@ class GameApp {
         this.xor.meshes.load('bunny', 'models/bunny_lores.obj', null, null);
         this.xor.meshes.load('bunnyshell', 'models/bunny_lores_shell.obj', null, null);
         this.xor.meshes.load('bunnypen', 'models/bunnypen.obj', null, null);
+        this.xor.meshes.load('teapot', 'models/teapot.obj', null, null);
 
         this.initControls();
     }
@@ -111,7 +113,7 @@ class GameApp {
 
     syncLabels() {
         setSpan("totalMoney", this.game.money.toFixed(2));
-        setSpan("totalDays", this.game.days.toFixed(2));
+        setSpan("totalDays", this.game.days.toFixed(2) + "/" + this.game.totalWool.toFixed(2) + " ounces");
         setSpan("totalWool", this.game.wool.toFixed(2));
         setSpan("woolMarket", this.game.woolMarketValue.toFixed(2));
         setSpan("hayUnits", this.game.hayUnits.toFixed(2));
@@ -221,6 +223,7 @@ class GameApp {
         this.cameraAzimuth = 0.0;
         this.sunAz = 45.0;
         this.sunPitch = 45.0;
+        this.grave = false;
     }
 
     updateGame() {
@@ -236,6 +239,15 @@ class GameApp {
         ];
         this.player.update(dt, this.constants);
         this.player.bound(-4.5, 4.5, 0.0, 2.0);
+
+        if (this.game.life < 0) {
+            let amount = GTE.clamp(this.game.life * 0.3, -6, 0);
+            if (amount <= -3) {
+                this.grave = true;
+                amount = GTE.clamp(-6 + Math.abs(amount), -3, 0);
+            }
+            this.player.worldMatrix.translate(0, amount, 0);
+        }
 
         let X0 = this.player.position;
 
@@ -255,6 +267,8 @@ class GameApp {
             t.dx = 0;
             t.dy = 0;
         }
+
+        moveZ = GTE.clamp(moveZ, -1, 1) * (0.5 + this.game.hayNutrition * this.game.watered + this.game.treatNutrition * this.game.watered);
 
         this.player.worldMatrix.rotate(turnSpeed * turnY * dt, 0, 1, 0);
         this.player.worldMatrix.translate(0, 0, moveZ * dt);
@@ -285,12 +299,12 @@ class GameApp {
         this.renderBar(mesh, this.game.treatNutrition, 7, w * 4, w);
         this.renderBar(mesh, this.game.watered, 9, w * 5, w);
         this.renderBar(mesh, this.game.curFur, 12, w * 6, w);
-        this.renderBar(mesh, this.game.woolQuality, 1, w * 7, w);
-        this.renderBar(mesh, this.game.health, 15, w * 8, w);
-        this.renderBar(mesh, this.game.exercised, 1, w * 9, w);
+        this.renderBar(mesh, this.game.woolQuality, 3, w * 7, w);
+        this.renderBar(mesh, this.game.health, 11, w * 8, w);
+        this.renderBar(mesh, this.game.exercised, 13, w * 9, w);
         // this.renderBar(mesh, this.game.money / 100, 13, xor.graphics.width - w * 2, w);
         // this.renderBar(mesh, this.game.hayUnits / 100, 13, xor.graphics.width - w * 3, w);
-        this.renderBar(mesh, this.game.life / (5*365), 4, xor.graphics.width - w * 2, w * 2);
+        this.renderBar(mesh, this.game.life / (5 * 365), 4, xor.graphics.width - w * 2, w * 2);
 
         let pmatrix = Matrix4.makeOrtho2D(0, xor.graphics.width, 0, xor.graphics.height);
         let cmatrix = Matrix4.makeIdentity();
@@ -332,8 +346,12 @@ class GameApp {
             // render player
             this.setMaterial(rc, "fur1", "FurTexture", -1);
             rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);
-            xor.meshes.render('bunny', rc);
-        }
+            if (this.grave) {
+                xor.meshes.render('teapot', rc);
+            } else {
+                xor.meshes.render('bunny', rc);
+            }
+    }
 
         rc = xor.renderconfigs.use('fur');
         if (rc) {
@@ -350,13 +368,17 @@ class GameApp {
 
             for (let i = 0; i < this.iFurNumLayers; i++) {
                 let curLength = (i + 1) / (this.iFurNumLayers - 1);
-                let gravity = 0.05 * this.game.curFur;//-this.fFurGravity;
+                let gravity = 0.5 * this.game.curFur;//-this.fFurGravity;
                 let displacement = GTE.vec3(0.0, gravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
                 rc.uniform1f("FurMaxLength", this.fFurMaxLength * this.game.fur);
                 rc.uniform1f("FurCurLength", curLength);
                 rc.uniform3f("FurDisplacement", displacement);
                 rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);
-                xor.meshes.render('bunnyshell', rc);
+                if (this.grave) {
+                    xor.meshes.render('teapot', rc);
+                } else {
+                    xor.meshes.render('bunnyshell', rc);
+                }
             }
         }
         xor.renderconfigs.use(null);
@@ -411,6 +433,22 @@ class GameApp {
 
     sell() {
         this.game.sell();
+    }
+
+    buyHay(x: number) {
+        this.game.buyHay(x);
+    }
+
+    buyPellets(x: number) {
+        this.game.buyPellets(x);
+    }
+
+    buyVeggies(x: number) {
+        this.game.buyVeggies(x);
+    }
+
+    buyTreats(x: number) {
+        this.game.buyTreats(x);
     }
 }
 

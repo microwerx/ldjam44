@@ -284,6 +284,7 @@ class GameLogic {
         this.veggieCost = 1;
         this.treatCost = 1;
         this.money = 10.0;
+        this.totalWool = 0;
         this.days = 0;
         this.t1 = 0;
         this.gameSpeed = 5;
@@ -294,39 +295,42 @@ class GameLogic {
             return;
         let dt = deltaTime * this.gameSpeed;
         this.t1 += dt;
-        this.days = this.t1 - this.t0;
-        let amount = 1 - smootherstep(this.curFur);
-        let beforeFur = this.curFur;
-        this.curFur = GTE.clamp(this.curFur + dt * amount / 90.0, 0, 1);
-        this.fur = this.curFur * this.maxFur;
+        if (this.life > 0) {
+            this.days = this.t1 - this.t0;
+        }
         this.health = GTE.clamp(this.hayNutrition * 0.7 +
             this.pelletNutrition * 0.2 +
             this.veggieNutrition * 0.1 +
             this.treatNutrition * 0.1 +
-            this.watered +
-            this.exercised, 0, 1);
+            this.watered + this.exercised, 0, 2) * 0.5;
         // diminish nutrition, water and exercise
-        amount = 0.001 * this.gameSpeed * dt * Math.max(0.01, (3 - this.health));
+        let amount = 0.001 * this.gameSpeed * dt * Math.max(0.01, (3 - this.health));
         this.hayNutrition = GTE.clamp(this.hayNutrition - 0.7 * amount, 0, 1);
         this.pelletNutrition = GTE.clamp(this.pelletNutrition - 0.2 * amount, 0, 1);
         this.veggieNutrition = GTE.clamp(this.veggieNutrition - 0.1 * amount, 0, 1);
-        this.treatNutrition = GTE.clamp(this.treatNutrition - 0.1 * amount, 0, 1);
-        this.watered = GTE.clamp(this.watered - dt * amount, 0, 1);
+        this.treatNutrition = GTE.clamp(this.treatNutrition - amount, 0, 1);
+        this.watered = GTE.clamp(this.watered - amount, 0, 1);
         this.exercised = Math.max(0, this.exercised - dt * 0.5);
         // rabbits get dirty and matted
-        let dirtify = dt * this.gameSpeed * (0.01 * this.exercised);
+        let dirtify = dt * this.gameSpeed * (0.5 + this.exercised);
         this.brushed = GTE.clamp(this.brushed - dirtify, 0, 1);
         this.cleaned = GTE.clamp(this.cleaned - 0.55 * dirtify, 0, 1);
         // 2 - this.health means that we should
         // get about 10 years on this rabbit
         // if all is well! or 5 if not
-        this.life -= dt * GTE.clamp(2 - smootherstep(this.health), 1, 2);
+        let waterPenalty = 0.1 * this.life * dt * ((this.watered < 0.05) ? 1 : 0);
+        this.life -= dt * GTE.clamp(2 - smootherstep(this.health), 1, 2) + waterPenalty;
+        // Fur growth is dependent on health and cleanliness
         this.woolQuality = this.brushed * this.cleaned;
+        amount = (1 - smootherstep(this.curFur)) * Math.max(0.3, this.woolQuality * this.health);
+        let beforeFur = this.curFur;
+        this.curFur = GTE.clamp(this.curFur + dt * amount / 90.0, 0, 1);
+        this.fur = this.curFur * this.maxFur;
         this.woolMarket += dt * this.woolQuality * (this.curFur - beforeFur);
         this.woolMarketValue = this.woolMarketBase * this.woolMarket;
     }
     exercise(distance) {
-        this.exercised += distance;
+        this.exercised = GTE.clamp(this.exercised + distance, 0, 2);
     }
     groom() {
         let groomAmount = 0.1;
@@ -336,6 +340,7 @@ class GameLogic {
     }
     sell() {
         this.money += this.wool * this.woolMarketValue;
+        this.totalWool += this.wool;
         this.wool = 0;
         this.woolMarket = 0;
     }
@@ -368,6 +373,30 @@ class GameLogic {
     cleanArea() {
         this.cleaned = GTE.clamp(this.cleaned + 0.1, 0, 1);
     }
+    buyHay(x) {
+        let available = this.money / this.hayCost;
+        let count = Math.min(available, x);
+        this.money -= count * this.hayCost;
+        this.hayUnits += count;
+    }
+    buyPellets(x) {
+        let available = this.money / this.pelletCost;
+        let count = Math.min(available, x);
+        this.money -= count * this.pelletCost;
+        this.pelletUnits += count;
+    }
+    buyVeggies(x) {
+        let available = this.money / this.veggieCost;
+        let count = Math.min(available, x);
+        this.money -= count * this.veggieCost;
+        this.pelletUnits += count;
+    }
+    buyTreats(x) {
+        let available = this.money / this.treatCost;
+        let count = Math.min(available, x);
+        this.money -= count * this.treatCost;
+        this.treatUnits += count;
+    }
 }
 /// <reference path="../../LibXOR/LibXOR.d.ts" />
 /// <reference path="htmlutils.ts" />
@@ -392,6 +421,7 @@ class GameApp {
         this.b1 = 0.0;
         this.b2 = 0.0;
         this.b3 = 0.0;
+        this.grave = false;
         // camera view
         this.cameraCenter = new Vector3(0, 0, 0);
         this.cameraZoom = 1.0;
@@ -444,6 +474,7 @@ class GameApp {
         this.xor.meshes.load('bunny', 'models/bunny_lores.obj', null, null);
         this.xor.meshes.load('bunnyshell', 'models/bunny_lores_shell.obj', null, null);
         this.xor.meshes.load('bunnypen', 'models/bunnypen.obj', null, null);
+        this.xor.meshes.load('teapot', 'models/teapot.obj', null, null);
         this.initControls();
     }
     initControls() {
@@ -463,7 +494,7 @@ class GameApp {
     }
     syncLabels() {
         setSpan("totalMoney", this.game.money.toFixed(2));
-        setSpan("totalDays", this.game.days.toFixed(2));
+        setSpan("totalDays", this.game.days.toFixed(2) + "/" + this.game.totalWool.toFixed(2) + " ounces");
         setSpan("totalWool", this.game.wool.toFixed(2));
         setSpan("woolMarket", this.game.woolMarketValue.toFixed(2));
         setSpan("hayUnits", this.game.hayUnits.toFixed(2));
@@ -569,6 +600,7 @@ class GameApp {
         this.cameraAzimuth = 0.0;
         this.sunAz = 45.0;
         this.sunPitch = 45.0;
+        this.grave = false;
     }
     updateGame() {
         this.game.update(this.xor.t1, this.xor.dt);
@@ -581,6 +613,14 @@ class GameApp {
         ];
         this.player.update(dt, this.constants);
         this.player.bound(-4.5, 4.5, 0.0, 2.0);
+        if (this.game.life < 0) {
+            let amount = GTE.clamp(this.game.life * 0.3, -6, 0);
+            if (amount <= -3) {
+                this.grave = true;
+                amount = GTE.clamp(-6 + Math.abs(amount), -3, 0);
+            }
+            this.player.worldMatrix.translate(0, amount, 0);
+        }
         let X0 = this.player.position;
         let turnY = -this.joyTurnY;
         let moveZ = this.joyTurnX;
@@ -596,6 +636,7 @@ class GameApp {
             t.dx = 0;
             t.dy = 0;
         }
+        moveZ = GTE.clamp(moveZ, -1, 1) * (0.5 + this.game.hayNutrition * this.game.watered + this.game.treatNutrition * this.game.watered);
         this.player.worldMatrix.rotate(turnSpeed * turnY * dt, 0, 1, 0);
         this.player.worldMatrix.translate(0, 0, moveZ * dt);
         this.player.x.reset();
@@ -621,9 +662,9 @@ class GameApp {
         this.renderBar(mesh, this.game.treatNutrition, 7, w * 4, w);
         this.renderBar(mesh, this.game.watered, 9, w * 5, w);
         this.renderBar(mesh, this.game.curFur, 12, w * 6, w);
-        this.renderBar(mesh, this.game.woolQuality, 1, w * 7, w);
-        this.renderBar(mesh, this.game.health, 15, w * 8, w);
-        this.renderBar(mesh, this.game.exercised, 1, w * 9, w);
+        this.renderBar(mesh, this.game.woolQuality, 3, w * 7, w);
+        this.renderBar(mesh, this.game.health, 11, w * 8, w);
+        this.renderBar(mesh, this.game.exercised, 13, w * 9, w);
         // this.renderBar(mesh, this.game.money / 100, 13, xor.graphics.width - w * 2, w);
         // this.renderBar(mesh, this.game.hayUnits / 100, 13, xor.graphics.width - w * 3, w);
         this.renderBar(mesh, this.game.life / (5 * 365), 4, xor.graphics.width - w * 2, w * 2);
@@ -662,7 +703,12 @@ class GameApp {
             // render player
             this.setMaterial(rc, "fur1", "FurTexture", -1);
             rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);
-            xor.meshes.render('bunny', rc);
+            if (this.grave) {
+                xor.meshes.render('teapot', rc);
+            }
+            else {
+                xor.meshes.render('bunny', rc);
+            }
         }
         rc = xor.renderconfigs.use('fur');
         if (rc) {
@@ -677,13 +723,18 @@ class GameApp {
             rc.uniformMatrix4f('WorldMatrix', m);
             for (let i = 0; i < this.iFurNumLayers; i++) {
                 let curLength = (i + 1) / (this.iFurNumLayers - 1);
-                let gravity = 0.05 * this.game.curFur; //-this.fFurGravity;
+                let gravity = 0.5 * this.game.curFur; //-this.fFurGravity;
                 let displacement = GTE.vec3(0.0, gravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
                 rc.uniform1f("FurMaxLength", this.fFurMaxLength * this.game.fur);
                 rc.uniform1f("FurCurLength", curLength);
                 rc.uniform3f("FurDisplacement", displacement);
                 rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);
-                xor.meshes.render('bunnyshell', rc);
+                if (this.grave) {
+                    xor.meshes.render('teapot', rc);
+                }
+                else {
+                    xor.meshes.render('bunnyshell', rc);
+                }
             }
         }
         xor.renderconfigs.use(null);
@@ -726,6 +777,18 @@ class GameApp {
     }
     sell() {
         this.game.sell();
+    }
+    buyHay(x) {
+        this.game.buyHay(x);
+    }
+    buyPellets(x) {
+        this.game.buyPellets(x);
+    }
+    buyVeggies(x) {
+        this.game.buyVeggies(x);
+    }
+    buyTreats(x) {
+        this.game.buyTreats(x);
     }
 }
 var game;

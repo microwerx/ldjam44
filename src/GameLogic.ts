@@ -34,6 +34,7 @@ class GameLogic {
 
     money = 10.0;
 
+    totalWool = 0;
     days = 0;
     t1 = 0;
     gameSpeed = 5;
@@ -46,47 +47,51 @@ class GameLogic {
         if (t1 < this.t0) return;
         let dt = deltaTime * this.gameSpeed;
         this.t1 += dt;
-        this.days = this.t1 - this.t0;
-
-        let amount = 1 - smootherstep(this.curFur);
-        let beforeFur = this.curFur;
-        this.curFur = GTE.clamp(this.curFur + dt * amount / 90.0, 0, 1);
-        this.fur = this.curFur * this.maxFur;
+        if (this.life > 0)
+        {
+            this.days = this.t1 - this.t0;
+        }
 
         this.health = GTE.clamp(
             this.hayNutrition * 0.7 +
             this.pelletNutrition * 0.2 +
             this.veggieNutrition * 0.1 +
             this.treatNutrition * 0.1 +
-            this.watered +
-            this.exercised, 0, 1);
+            this.watered + this.exercised,
+            0, 2) * 0.5;
 
         // diminish nutrition, water and exercise
-        amount = 0.001 * this.gameSpeed * dt * Math.max(0.01, (3 - this.health));
+        let amount = 0.001 * this.gameSpeed * dt * Math.max(0.01, (3 - this.health));
         this.hayNutrition = GTE.clamp(this.hayNutrition - 0.7 * amount, 0, 1);
         this.pelletNutrition = GTE.clamp(this.pelletNutrition - 0.2 * amount, 0, 1);
         this.veggieNutrition = GTE.clamp(this.veggieNutrition - 0.1 * amount, 0, 1);
-        this.treatNutrition = GTE.clamp(this.treatNutrition - 0.1 * amount, 0, 1);
-        this.watered = GTE.clamp(this.watered - dt * amount, 0, 1);
+        this.treatNutrition = GTE.clamp(this.treatNutrition - amount, 0, 1);
+        this.watered = GTE.clamp(this.watered - amount, 0, 1);
         this.exercised = Math.max(0, this.exercised - dt * 0.5);
 
         // rabbits get dirty and matted
-        let dirtify = dt * this.gameSpeed * (0.01 * this.exercised);
+        let dirtify = dt * this.gameSpeed * (0.5 + this.exercised);
         this.brushed = GTE.clamp(this.brushed - dirtify, 0, 1);
         this.cleaned = GTE.clamp(this.cleaned - 0.55 * dirtify, 0, 1);
 
         // 2 - this.health means that we should
         // get about 10 years on this rabbit
         // if all is well! or 5 if not
-        this.life -= dt * GTE.clamp(2 - smootherstep(this.health), 1, 2);
+        let waterPenalty = 0.1 * this.life * dt * ((this.watered < 0.05) ? 1 : 0);
+        this.life -= dt * GTE.clamp(2 - smootherstep(this.health), 1, 2) + waterPenalty;
 
+        // Fur growth is dependent on health and cleanliness
         this.woolQuality = this.brushed * this.cleaned;
+        amount = (1 - smootherstep(this.curFur)) * Math.max(0.3, this.woolQuality * this.health);
+        let beforeFur = this.curFur;
+        this.curFur = GTE.clamp(this.curFur + dt * amount / 90.0, 0, 1);
+        this.fur = this.curFur * this.maxFur;
         this.woolMarket += dt * this.woolQuality * (this.curFur - beforeFur);
         this.woolMarketValue = this.woolMarketBase * this.woolMarket;
     }
 
     exercise(distance: number) {
-        this.exercised += distance;
+        this.exercised = GTE.clamp(this.exercised + distance, 0, 2);
     }
 
     groom() {
@@ -98,6 +103,7 @@ class GameLogic {
 
     sell() {
         this.money += this.wool * this.woolMarketValue;
+        this.totalWool += this.wool;
         this.wool = 0;
         this.woolMarket = 0;
     }
@@ -136,5 +142,33 @@ class GameLogic {
 
     cleanArea() {
         this.cleaned = GTE.clamp(this.cleaned + 0.1, 0, 1);
+    }
+
+    buyHay(x: number) {
+        let available = this.money / this.hayCost;
+        let count = Math.min(available, x);
+        this.money -= count * this.hayCost;
+        this.hayUnits += count;
+    }
+
+    buyPellets(x: number) {
+        let available = this.money / this.pelletCost;
+        let count = Math.min(available, x);
+        this.money -= count * this.pelletCost;
+        this.pelletUnits += count;
+    }
+
+    buyVeggies(x: number) {
+        let available = this.money / this.veggieCost;
+        let count = Math.min(available, x);
+        this.money -= count * this.veggieCost;
+        this.pelletUnits += count;
+    }
+
+    buyTreats(x: number) {
+        let available = this.money / this.treatCost;
+        let count = Math.min(available, x);
+        this.money -= count * this.treatCost;
+        this.treatUnits += count;
     }
 }

@@ -135,6 +135,7 @@ declare class GameLogic {
     veggieCost: number;
     treatCost: number;
     money: number;
+    totalWool: number;
     days: number;
     t1: number;
     gameSpeed: number;
@@ -150,6 +151,10 @@ declare class GameLogic {
     feedTreats(): void;
     brushBunny(): void;
     cleanArea(): void;
+    buyHay(x: number): void;
+    buyPellets(x: number): void;
+    buyVeggies(x: number): void;
+    buyTreats(x: number): void;
 }
 declare class GameApp {
     xor: LibXOR;
@@ -168,6 +173,7 @@ declare class GameApp {
     b2: number;
     b3: number;
     game: GameLogic;
+    grave: boolean;
     readonly loaded: boolean;
     cameraCenter: Vector3;
     cameraZoom: number;
@@ -206,6 +212,10 @@ declare class GameApp {
     brushBunny(): void;
     cleanArea(): void;
     sell(): void;
+    buyHay(x: number): void;
+    buyPellets(x: number): void;
+    buyVeggies(x: number): void;
+    buyTreats(x: number): void;
 }
 declare var game: GameApp;
 declare var trystartfn: any;
