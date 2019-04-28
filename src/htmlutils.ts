@@ -179,4 +179,11 @@ function toggle(id: string) {
     }
 }
 
+function setSpan(id: string, innerHTML: string) {
+    let e = document.getElementById(id);
+    if (e) {
+        e.innerHTML = innerHTML;
+    }
+}
+
 // END HELPFUL HTML5 CODE

@@ -147,11 +147,12 @@ em {
 }
 
 .gamecontrols {
-
+    display: block;
 }
 
 .gamebutton {
     margin-bottom: 0.2em;
+    padding: 0.5em;
     border: none;
     border-radius: 10px;
     box-shadow: 2px 4px 0px 0px rgba(0,0,0,1);
@@ -160,8 +161,24 @@ em {
     font-size: 1em;
 }
 
-.bfeed {
+.sgb {
+    width: 1em;
+    margin: 0.1em;
+    padding: 0.0em;
+    border: none;
+    border-radius: 5px;
+    box-shadow: 2px 4px 0px 0px rgba(0,0,0,1);
+    font-family: rainier, sunbeat, sans-serif;
+    font-feature-settings: "dlig" on;
+    font-size: 1em;
+}
+
+.bhay {
     background-color: #408040;
+}
+
+.bpellets {
+    background-color: #00b4b4;
 }
 
 .bwater {
@@ -180,8 +197,51 @@ em {
     background-color: #d4ab38;
 }
 
+.bbrush {
+    background-color: #7200e4;
+}
+
 .btreats {
     background-color: #00ff00;
+}
+
+.tmoney {
+    color: #d4ab38;
+}
+
+.twool {
+    color: #e40072;
+}
+
+.thay {
+    color: #408040;
+}
+
+.tpellets {
+    color: #00b4b4;
+}
+
+.tveggies {
+    color: #e47200;
+}
+
+.ttreats {
+    color: #00ff00;
+}
+
+.tpart {
+    display: inline-block;
+    width: 5em;
+}
+
+.tpartr {
+    display: inline-block;
+    width: 5em;
+    text-align: right;
+}
+
+.num {
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 /*

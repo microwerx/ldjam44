@@ -7,11 +7,12 @@
         "strict": true,
         "outDir": "",
         "outFile": "./game.js",
-        "sourceMap": true
+        "sourceMap": true,
+        "declaration": true
     },
     "include": [
-        "src/game.ts",
-        "../LibXOR/src/LibXOR.ts",
+        "src/GameApp.ts",
+        "../LibXOR/LibXOR.d.ts"
     ],
     "exclude": [
         "node_modules",
