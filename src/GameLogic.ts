@@ -6,7 +6,7 @@ class GameLogic {
     watered = 1.0;
     brushed = 1.0;
     cleaned = 1.0;
-    exercised = 0.0;
+    exercised = 1.0;
 
     fur = 0.0;
     curFur = 0;
@@ -22,6 +22,7 @@ class GameLogic {
     // treated well!
     life = 10.0 * 365;
     health = 1.0;
+
     hayUnits = 10;
     pelletUnits = 10;
     veggieUnits = 10;
@@ -70,18 +71,18 @@ class GameLogic {
         this.exercised = Math.max(0, this.exercised - dt * 0.5);
 
         // rabbits get dirty and matted
-        let dirtify = dt * this.gameSpeed * (0.5 + this.exercised);
+        let dirtify = 0.005 * dt * this.gameSpeed * (0.5 + this.exercised);
         this.brushed = GTE.clamp(this.brushed - dirtify, 0, 1);
         this.cleaned = GTE.clamp(this.cleaned - 0.55 * dirtify, 0, 1);
 
         // 2 - this.health means that we should
         // get about 10 years on this rabbit
         // if all is well! or 5 if not
-        let waterPenalty = 0.1 * this.life * dt * ((this.watered < 0.05) ? 1 : 0);
+        let waterPenalty = 0.05 * this.life * dt * ((this.watered < 0.05) ? 1 : 0);
         this.life -= dt * GTE.clamp(2 - smootherstep(this.health), 1, 2) + waterPenalty;
 
         // Fur growth is dependent on health and cleanliness
-        this.woolQuality = this.brushed * this.cleaned;
+        this.woolQuality = GTE.clamp(this.brushed * this.cleaned + 0.2, 0, 2);
         amount = (1 - smootherstep(this.curFur)) * Math.max(0.3, this.woolQuality * this.health);
         let beforeFur = this.curFur;
         this.curFur = GTE.clamp(this.curFur + dt * amount / 90.0, 0, 1);
@@ -137,11 +138,11 @@ class GameLogic {
     }
 
     brushBunny() {
-        this.brushed = GTE.clamp(this.brushed + 0.1, 0, 1);
+        this.brushed = GTE.clamp(this.brushed + 0.1, 0.1, 2);
     }
 
     cleanArea() {
-        this.cleaned = GTE.clamp(this.cleaned + 0.1, 0, 1);
+        this.cleaned = GTE.clamp(this.cleaned + 0.1, 0.1, 2);
     }
 
     buyHay(x: number) {

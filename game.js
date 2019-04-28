@@ -261,7 +261,7 @@ class GameLogic {
         this.watered = 1.0;
         this.brushed = 1.0;
         this.cleaned = 1.0;
-        this.exercised = 0.0;
+        this.exercised = 1.0;
         this.fur = 0.0;
         this.curFur = 0;
         this.maxFur = 5;
@@ -312,16 +312,16 @@ class GameLogic {
         this.watered = GTE.clamp(this.watered - amount, 0, 1);
         this.exercised = Math.max(0, this.exercised - dt * 0.5);
         // rabbits get dirty and matted
-        let dirtify = dt * this.gameSpeed * (0.5 + this.exercised);
+        let dirtify = 0.005 * dt * this.gameSpeed * (0.5 + this.exercised);
         this.brushed = GTE.clamp(this.brushed - dirtify, 0, 1);
         this.cleaned = GTE.clamp(this.cleaned - 0.55 * dirtify, 0, 1);
         // 2 - this.health means that we should
         // get about 10 years on this rabbit
         // if all is well! or 5 if not
-        let waterPenalty = 0.1 * this.life * dt * ((this.watered < 0.05) ? 1 : 0);
+        let waterPenalty = 0.05 * this.life * dt * ((this.watered < 0.05) ? 1 : 0);
         this.life -= dt * GTE.clamp(2 - smootherstep(this.health), 1, 2) + waterPenalty;
         // Fur growth is dependent on health and cleanliness
-        this.woolQuality = this.brushed * this.cleaned;
+        this.woolQuality = GTE.clamp(this.brushed * this.cleaned + 0.2, 0, 2);
         amount = (1 - smootherstep(this.curFur)) * Math.max(0.3, this.woolQuality * this.health);
         let beforeFur = this.curFur;
         this.curFur = GTE.clamp(this.curFur + dt * amount / 90.0, 0, 1);
@@ -368,10 +368,10 @@ class GameLogic {
         this.treatUnits -= amount;
     }
     brushBunny() {
-        this.brushed = GTE.clamp(this.brushed + 0.1, 0, 1);
+        this.brushed = GTE.clamp(this.brushed + 0.1, 0.1, 2);
     }
     cleanArea() {
-        this.cleaned = GTE.clamp(this.cleaned + 0.1, 0, 1);
+        this.cleaned = GTE.clamp(this.cleaned + 0.1, 0.1, 2);
     }
     buyHay(x) {
         let available = this.money / this.hayCost;
@@ -662,7 +662,7 @@ class GameApp {
         this.renderBar(mesh, this.game.treatNutrition, 7, w * 4, w);
         this.renderBar(mesh, this.game.watered, 9, w * 5, w);
         this.renderBar(mesh, this.game.curFur, 12, w * 6, w);
-        this.renderBar(mesh, this.game.woolQuality, 3, w * 7, w);
+        this.renderBar(mesh, this.game.woolQuality, 4, w * 7, w);
         this.renderBar(mesh, this.game.health, 11, w * 8, w);
         this.renderBar(mesh, this.game.exercised, 13, w * 9, w);
         // this.renderBar(mesh, this.game.money / 100, 13, xor.graphics.width - w * 2, w);
@@ -723,7 +723,7 @@ class GameApp {
             rc.uniformMatrix4f('WorldMatrix', m);
             for (let i = 0; i < this.iFurNumLayers; i++) {
                 let curLength = (i + 1) / (this.iFurNumLayers - 1);
-                let gravity = 0.5 * this.game.curFur; //-this.fFurGravity;
+                let gravity = 0.1 * this.game.curFur; //-this.fFurGravity;
                 let displacement = GTE.vec3(0.0, gravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
                 rc.uniform1f("FurMaxLength", this.fFurMaxLength * this.game.fur);
                 rc.uniform1f("FurCurLength", curLength);

@@ -299,7 +299,7 @@ class GameApp {
         this.renderBar(mesh, this.game.treatNutrition, 7, w * 4, w);
         this.renderBar(mesh, this.game.watered, 9, w * 5, w);
         this.renderBar(mesh, this.game.curFur, 12, w * 6, w);
-        this.renderBar(mesh, this.game.woolQuality, 3, w * 7, w);
+        this.renderBar(mesh, this.game.woolQuality, 4, w * 7, w);
         this.renderBar(mesh, this.game.health, 11, w * 8, w);
         this.renderBar(mesh, this.game.exercised, 13, w * 9, w);
         // this.renderBar(mesh, this.game.money / 100, 13, xor.graphics.width - w * 2, w);
@@ -368,7 +368,7 @@ class GameApp {
 
             for (let i = 0; i < this.iFurNumLayers; i++) {
                 let curLength = (i + 1) / (this.iFurNumLayers - 1);
-                let gravity = 0.5 * this.game.curFur;//-this.fFurGravity;
+                let gravity = 0.1 * this.game.curFur;//-this.fFurGravity;
                 let displacement = GTE.vec3(0.0, gravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
                 rc.uniform1f("FurMaxLength", this.fFurMaxLength * this.game.fur);
                 rc.uniform1f("FurCurLength", curLength);
