@@ -28,7 +28,7 @@ class GameApp {
     game!: GameLogic;
     grave = false;
     gameStarted = false;
-    initialSpeed = 0.25;
+    initialSpeed = 1;
 
     get loaded(): boolean {
         if (!this.xor.textfiles.loaded) return false;
@@ -432,9 +432,9 @@ class GameApp {
                 rc.uniform1f("map_kd_mix", 1 - this.game.cleaned);
                 for (let i = 0; i < this.iFurNumLayers; i++) {
                     let curLength = (i + 1) / (this.iFurNumLayers - 1);
-                    let gravity = 0.1 * (this.game.curFur * this.game.brushed);
+                    let gravity = - 0.2 * (this.game.curFur * (1 - this.game.brushed));
                     let displacement = GTE.vec3(0.0, gravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
-                    rc.uniform1f("FurMaxLength", this.fFurMaxLength * (0.1 + this.game.fur));
+                    rc.uniform1f("FurMaxLength", this.fFurMaxLength * (0.1 + 5.0 * this.game.curFur));
                     rc.uniform1f("FurCurLength", curLength);
                     rc.uniform3f("FurDisplacement", displacement);
                     rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);

@@ -10,7 +10,7 @@ class GameLogic {
 
     fur = 0.0;
     curFur = 0;
-    maxFur = 5;
+    maxFur = 16;
     wool = 0;
     woolQuality = 1.0;
     woolMarketBase = 13;
@@ -106,7 +106,7 @@ class GameLogic {
         let beforeFur = this.curFur;
         this.curFur = GTE.clamp(this.curFur + amount, 0, 1);
         this.fur = this.curFur * this.maxFur;
-        this.woolMarket += 2 * this.woolQuality * (this.curFur - beforeFur);
+        this.woolMarket += this.woolQuality * (this.curFur - beforeFur);
         this.woolMarketValue = this.woolMarketBase * this.woolMarket;
     }
 

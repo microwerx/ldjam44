@@ -43,8 +43,9 @@ void main() {
     // get fur
     vec4 furThick = texture2D(FurThickness, vTexcoord.st);
     vec4 furTexel = texture2D(FurTexture, vTexcoord.st);
-    furTexel = (1.0 - map_kd_mix) * furTexel + map_kd_mix * vec4(1.0);
-    float furVisibility = (FurCurLength > furThick.a) ? 0.0 : furTexel.a;
+    float alpha = furTexel.a;
+    furTexel = (1.0 - map_kd_mix) * furTexel + map_kd_mix * vec4(1.0, 1.0, 1.0, 0.5);
+    float furVisibility = (FurCurLength > furThick.a) ? 0.0 : alpha;
     furTexel.a = (FurCurLength == 0.0) ? 1.0 : furVisibility;
     if (furTexel.a < 0.5) discard;
     float furShadow = lerp(0.4, 1.0, FurCurLength);

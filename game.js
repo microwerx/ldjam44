@@ -264,7 +264,7 @@ class GameLogic {
         this.exercised = 1.0;
         this.fur = 0.0;
         this.curFur = 0;
-        this.maxFur = 5;
+        this.maxFur = 16;
         this.wool = 0;
         this.woolQuality = 1.0;
         this.woolMarketBase = 13;
@@ -346,7 +346,7 @@ class GameLogic {
         let beforeFur = this.curFur;
         this.curFur = GTE.clamp(this.curFur + amount, 0, 1);
         this.fur = this.curFur * this.maxFur;
-        this.woolMarket += 2 * this.woolQuality * (this.curFur - beforeFur);
+        this.woolMarket += this.woolQuality * (this.curFur - beforeFur);
         this.woolMarketValue = this.woolMarketBase * this.woolMarket;
     }
     exercise(distance) {
@@ -445,7 +445,7 @@ class GameApp {
         this.b3 = 0.0;
         this.grave = false;
         this.gameStarted = false;
-        this.initialSpeed = 0.25;
+        this.initialSpeed = 1;
         // camera view
         this.cameraCenter = new Vector3(0, 0, 0);
         this.cameraZoom = 1.0;
@@ -808,9 +808,9 @@ class GameApp {
                 rc.uniform1f("map_kd_mix", 1 - this.game.cleaned);
                 for (let i = 0; i < this.iFurNumLayers; i++) {
                     let curLength = (i + 1) / (this.iFurNumLayers - 1);
-                    let gravity = 0.1 * (this.game.curFur * this.game.brushed);
+                    let gravity = -0.2 * (this.game.curFur * (1 - this.game.brushed));
                     let displacement = GTE.vec3(0.0, gravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
-                    rc.uniform1f("FurMaxLength", this.fFurMaxLength * (0.1 + this.game.fur));
+                    rc.uniform1f("FurMaxLength", this.fFurMaxLength * (0.1 + 5.0 * this.game.curFur));
                     rc.uniform1f("FurCurLength", curLength);
                     rc.uniform3f("FurDisplacement", displacement);
                     rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);
