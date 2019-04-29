@@ -279,7 +279,7 @@ class GameLogic {
         this.pelletUnits = 10;
         this.veggieUnits = 10;
         this.treatUnits = 10;
-        this.hayCost = 7;
+        this.hayCost = 5;
         this.pelletCost = 3;
         this.veggieCost = 2;
         this.treatCost = 1;
@@ -667,6 +667,7 @@ class GameApp {
     }
     updatePlayer(dt) {
         const turnSpeed = 50;
+        const moveSpeed = 5;
         this.player.accelerations = [
             GTE.vec3(0.0, -this.joyMoveZ * this.constants.g * 2, 0.0),
             GTE.vec3(0.0 * this.joyMoveX * 10.0, 0.0, 0.0),
@@ -705,9 +706,9 @@ class GameApp {
             t.dx = t.dx * dt * 0.9;
             t.dy = t.dy * dt * 0.9;
         }
-        let speed = (0.5 + this.game.hayNutrition * this.game.watered + 3 * this.game.treatNutrition);
+        let speed = (1 + this.game.hayNutrition * this.game.watered + 3 * this.game.treatNutrition);
         turnY = GTE.clamp(turnY, -1, 1) * speed;
-        moveZ = GTE.clamp(moveZ, -5, 5);
+        moveZ = GTE.clamp(moveZ, -1, 1) * speed;
         this.player.worldMatrix.rotate(turnSpeed * turnY * dt, 0, 1, 0);
         this.player.worldMatrix.translate(0, 0, moveZ * dt);
         this.player.x.reset();

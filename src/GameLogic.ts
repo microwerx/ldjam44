@@ -28,7 +28,7 @@ class GameLogic {
     veggieUnits = 10;
     treatUnits = 10;
 
-    hayCost = 7;
+    hayCost = 5;
     pelletCost = 3;
     veggieCost = 2;
     treatCost = 1;

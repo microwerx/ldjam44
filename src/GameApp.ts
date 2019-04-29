@@ -272,6 +272,7 @@ class GameApp {
 
     updatePlayer(dt: number) {
         const turnSpeed = 50;
+        const moveSpeed = 5;
 
         this.player.accelerations = [
             GTE.vec3(0.0, -this.joyMoveZ * this.constants.g * 2, 0.0),
@@ -317,9 +318,9 @@ class GameApp {
             t.dy = t.dy * dt * 0.9;
         }
 
-        let speed = (0.5 + this.game.hayNutrition * this.game.watered + 3 * this.game.treatNutrition);
+        let speed = (1 + this.game.hayNutrition * this.game.watered + 3 * this.game.treatNutrition);
         turnY = GTE.clamp(turnY, -1, 1) * speed;
-        moveZ = GTE.clamp(moveZ, -5, 5);
+        moveZ = GTE.clamp(moveZ, -1, 1) * speed;
 
         this.player.worldMatrix.rotate(turnSpeed * turnY * dt, 0, 1, 0);
         this.player.worldMatrix.translate(0, 0, moveZ * dt);
