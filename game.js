@@ -693,8 +693,12 @@ class GameApp {
         }
         let t = this.xor.input.touches[0];
         if (t.pressed) {
-            turnY += GTE.clamp(t.touchDelta.x / 30, -1, 1);
-            moveZ -= GTE.clamp(t.touchDelta.y / 30, -1, 1);
+            if (Math.abs(t.touchDelta.x) > 30) {
+                turnY += GTE.clamp(t.touchDelta.x / 30, -1, 1);
+            }
+            if (Math.abs(t.touchDelta.y) > 30) {
+                moveZ -= GTE.clamp(t.touchDelta.y / 30, -1, 1);
+            }
             t.dx = t.dx * dt * 0.9;
             t.dy = t.dy * dt * 0.9;
         }
@@ -736,6 +740,7 @@ class GameApp {
         let cmatrix = Matrix4.makeIdentity();
         let rc = xor.renderconfigs.use('gui');
         if (rc) {
+            rc.fx.gl.disable(WebGLRenderingContext.DEPTH_TEST);
             rc.uniformMatrix4f('ProjectionMatrix', pmatrix);
             rc.uniformMatrix4f('CameraMatrix', cmatrix);
             rc.uniformMatrix4f('WorldMatrix', Matrix4.makeTranslation(0, 0, 0));
@@ -815,7 +820,6 @@ class GameApp {
             }
         }
         xor.renderconfigs.use(null);
-        this.rendergui();
     }
     mainloop() {
         let self = this;
@@ -824,6 +828,7 @@ class GameApp {
             let dt = Math.min(0.016666, self.xor.dt);
             self.update(dt);
             self.render();
+            self.rendergui();
             self.mainloop();
         });
     }
