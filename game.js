@@ -475,7 +475,7 @@ class GameApp {
     }
     init() {
         hflog.logElement = "log";
-        this.xor.graphics.setVideoMode(1.5 * 384, 384);
+        this.xor.graphics.setVideoMode(640, 512);
         this.xor.input.init();
         this.xor.sound.init();
         let fx = this.xor.fluxions;
@@ -544,10 +544,6 @@ class GameApp {
     }
     start() {
         this.reset();
-        this.xor.sound.sampler.stopSample(0);
-        this.xor.sound.sampler.stopSample(1);
-        this.xor.sound.sampler.stopSample(2);
-        this.xor.sound.sampler.playSample(0);
         this.mainloop();
     }
     updateInput(xor) {
@@ -647,6 +643,9 @@ class GameApp {
         this.musicStarted = false;
         this.endMusicStarted = false;
         // reset audio
+        this.xor.sound.sampler.stopSample(0);
+        this.xor.sound.sampler.stopSample(1);
+        this.xor.sound.sampler.stopSample(2);
         this.xor.sound.sampler.playSample(0);
     }
     updateGame() {
@@ -846,7 +845,7 @@ class GameApp {
     setSpeed(speed) {
         if (!this.game)
             return;
-        this.initialSpeed = GTE.clamp(speed, 0.1, 10);
+        this.initialSpeed = GTE.clamp(speed, 0.1, 100);
         this.game.gameSpeed = this.initialSpeed;
     }
     feedHay() {
