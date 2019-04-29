@@ -301,7 +301,7 @@ class GameLogic {
         let dt = deltaTime * this.gameSpeed;
         this.t1 += dt;
         if (this.life > 0) {
-            this.days = this.t1 - this.t0;
+            this.days += dt;
         }
         this.health = GTE.clamp(this.hayNutrition * 0.7 +
             this.pelletNutrition * 0.2 +
