@@ -33,7 +33,7 @@ class GameLogic {
     veggieCost = 2;
     treatCost = 1;
 
-    money = 10.0;
+    money = 50.0;
 
     totalWool = 0;
     totalWoolMoney = 0;
@@ -65,7 +65,7 @@ class GameLogic {
             this.watered,
             0, 2);
 
-        const exerciseDays = 70;
+        const exerciseDays = 30;
         const waterDays = 30;
         const hayDays = 70;
         const pelletDays = 100;
@@ -105,7 +105,7 @@ class GameLogic {
         let beforeFur = this.curFur;
         this.curFur = GTE.clamp(this.curFur + amount, 0, 1);
         this.fur = this.curFur * this.maxFur;
-        this.woolMarket += this.woolQuality * (this.curFur - beforeFur);
+        this.woolMarket += 2 * this.woolQuality * (this.curFur - beforeFur);
         this.woolMarketValue = this.woolMarketBase * this.woolMarket;
     }
 
@@ -153,7 +153,7 @@ class GameLogic {
 
     feedTreats() {
         let amount = Math.min(1, this.treatUnits);
-        this.treatNutrition = GTE.clamp(this.treatNutrition + amount/10, 0, 1);
+        this.treatNutrition = GTE.clamp(this.treatNutrition + amount/3, 0, 1);
         this.treatUnits -= amount;
     }
 
