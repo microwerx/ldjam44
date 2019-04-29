@@ -45,7 +45,7 @@ class GameApp {
     sunPitch = 45.0;
 
     // fur controls
-    iFurNumLayers = 1;
+    iFurNumLayers = 50;
     fFurMaxLength = 1;
     fKdMix = 0.5;
     fFurGravity = 0.0;
@@ -114,17 +114,17 @@ class GameApp {
     initControls() {
         let c = <HTMLDivElement>document.getElementById('controls');
         if (!c) return;
-        createRangeRow(c, "fFurMaxLength", 0.1, 0.01, 0.25, 0.001);
-        createRangeRow(c, "fKdMix", 0.25, 0.0, 1.0, 0.1);
-        createRangeRow(c, "iFurNumLayers", 50, 1, 50, 1);
-        createRangeRow(c, "fFurGravity", 0.0, 0.0, 0.1, 0.005);
+        // createRangeRow(c, "fFurMaxLength", 0.1, 0.01, 0.25, 0.001);
+        // createRangeRow(c, "fKdMix", 0.25, 0.0, 1.0, 0.1);
+        // createRangeRow(c, "iFurNumLayers", 50, 1, 50, 1);
+        // createRangeRow(c, "fFurGravity", 0.0, 0.0, 0.1, 0.005);
     }
 
     syncControls() {
-        this.iFurNumLayers = getRangeValue("iFurNumLayers");
-        this.fKdMix = getRangeValue("fKdMix");
-        this.fFurMaxLength = getRangeValue("fFurMaxLength");
-        this.fFurGravity = getRangeValue("fFurGravity");
+        // this.iFurNumLayers = getRangeValue("iFurNumLayers");
+        // this.fKdMix = getRangeValue("fKdMix");
+        // this.fFurMaxLength = getRangeValue("fFurMaxLength");
+        // this.fFurGravity = getRangeValue("fFurGravity");
     }
 
     syncLabels() {
