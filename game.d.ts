@@ -203,7 +203,7 @@ declare class GameApp {
     updateInput(xor: LibXOR): void;
     update(dt: number): void;
     reset(): void;
-    updateGame(): void;
+    updateGame(dt: number): void;
     updatePlayer(dt: number): void;
     setMaterial(rc: Fluxions.FxRenderConfig, texture: string, uniform: string, unit: number): void;
     renderBar(mesh: Fluxions.FxIndexedGeometryMesh, value: number, color: number, x: number, w: number): void;

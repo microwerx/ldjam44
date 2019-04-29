@@ -303,6 +303,10 @@ class GameLogic {
         if (this.life > 0) {
             this.days += dt;
         }
+        else {
+            this.life -= 2 * deltaTime;
+            return;
+        }
         this.health = GTE.clamp(this.hayNutrition * 0.7 +
             this.pelletNutrition * 0.2 +
             this.veggieNutrition * 0.2 +
@@ -334,10 +338,7 @@ class GameLogic {
         let waterPenalty = 180 * dt * ((this.watered < 0.05) ? 1 : 0);
         if (this.life > 0) {
             this.life -= dt * GTE.clamp(2 - this.health - 0.3 * this.exercised, 1, 2) + waterPenalty;
-        }
-        else {
-            this.life -= 2 * deltaTime;
-            return;
+            this.life = GTE.clamp(this.life, -0.001, 1e6);
         }
         // Fur growth is dependent on health, brushing, and cleanliness
         this.woolQuality = GTE.clamp(0.333 * (this.brushed * this.cleaned + this.health * this.cleaned + this.health * this.brushed), 0.5, 1);
@@ -444,7 +445,7 @@ class GameApp {
         this.b3 = 0.0;
         this.grave = false;
         this.gameStarted = false;
-        this.initialSpeed = 3;
+        this.initialSpeed = 0.25;
         // camera view
         this.cameraCenter = new Vector3(0, 0, 0);
         this.cameraZoom = 1.0;
@@ -625,7 +626,7 @@ class GameApp {
         this.syncControls();
         this.updateInput(xor);
         this.updatePlayer(dt);
-        this.updateGame();
+        this.updateGame(dt);
         this.syncLabels();
         //this.cameraAzimuth += this.joyTurnY * dt * 25;
     }
@@ -648,17 +649,19 @@ class GameApp {
         this.xor.sound.sampler.stopSample(2);
         this.xor.sound.sampler.playSample(0);
     }
-    updateGame() {
-        if (this.game.t1 > this.xor.t1)
+    updateGame(dt) {
+        if (!this.gameStarted && this.game.t1 > this.xor.t1)
             return;
         if (!this.gameStarted) {
             this.gameStarted = true;
             this.game = new GameLogic(this.xor.t1, this.initialSpeed);
             return;
         }
-        if (this.game.life > 0 && this.xor.sound.sampler.isStopped(2)) {
-            this.xor.sound.sampler.stopSample(0);
-            this.xor.sound.sampler.stopSample(1);
+        if (this.game.life > 0 && !this.musicStarted && this.xor.sound.sampler.isStopped(0)) {
+            this.xor.sound.sampler.playSample(2);
+            this.musicStarted = true;
+        }
+        else if (this.game.life > 0 && this.xor.sound.sampler.isStopped(2)) {
             this.xor.sound.sampler.playSample(2);
             this.musicStarted = true;
         }
@@ -667,18 +670,23 @@ class GameApp {
             this.musicStarted = false;
         }
         this.game.gameSpeed = this.initialSpeed;
-        this.game.update(this.xor.t1, this.xor.dt);
+        this.game.update(this.xor.t1, dt);
     }
     updatePlayer(dt) {
         const turnSpeed = 50;
         const moveSpeed = 5;
+        this.player.accelerations = [
+            GTE.vec3(0.0, -this.joyMoveZ * this.constants.g * 2, 0.0),
+        ];
+        this.player.update(dt, this.constants);
+        this.player.bound(-4.5, 4.5, 0.0, 2.0);
         if (this.game.life < 0) {
             if (!this.endMusicStarted) {
                 this.endMusicStarted = true;
                 this.xor.sound.sampler.stopSample(2);
                 this.xor.sound.sampler.playSample(1);
             }
-            let amount = GTE.clamp(this.game.life * 0.3, -6, 0);
+            let amount = GTE.clamp(this.game.life * 0.5, -6, 0);
             if (amount <= -3) {
                 this.grave = true;
                 amount = GTE.clamp(-6 + Math.abs(amount), -3, 0);
@@ -710,11 +718,6 @@ class GameApp {
         this.player.worldMatrix.rotate(turnSpeed * turnY * dt, 0, 1, 0);
         this.player.worldMatrix.translate(0, 0, moveZ * dt);
         this.player.x.reset();
-        this.player.accelerations = [
-            GTE.vec3(0.0, -this.joyMoveZ * this.constants.g * 2, 0.0),
-        ];
-        this.player.update(dt, this.constants);
-        this.player.bound(-4.5, 4.5, 0.0, 2.0);
         let X1 = this.player.position;
         this.game.exercise(X0.distance(X1));
     }
@@ -832,7 +835,7 @@ class GameApp {
         let self = this;
         window.requestAnimationFrame((t) => {
             self.xor.startFrame(t);
-            let dt = Math.min(0.016666, self.xor.dt);
+            let dt = Math.min(1 / 60, self.xor.dt);
             if (self.xor.dt > 0.033333) {
                 self.iFurNumLayers = GTE.clamp(self.iFurNumLayers * 0.7, 25, 50) | 0;
             }

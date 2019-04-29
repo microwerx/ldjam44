@@ -55,6 +55,9 @@ class GameLogic {
         this.t1 += dt;
         if (this.life > 0) {
             this.days += dt;
+        } else {
+            this.life -= 2 * deltaTime;
+            return;
         }
 
         this.health = GTE.clamp(
@@ -94,9 +97,7 @@ class GameLogic {
         let waterPenalty = 180 * dt * ((this.watered < 0.05) ? 1 : 0);
         if (this.life > 0) {
             this.life -= dt * GTE.clamp(2 - this.health - 0.3 * this.exercised, 1, 2) + waterPenalty;
-        } else {
-            this.life -= 2 * deltaTime;
-            return;
+            this.life = GTE.clamp(this.life, -0.001, 1e6);
         }
 
         // Fur growth is dependent on health, brushing, and cleanliness
