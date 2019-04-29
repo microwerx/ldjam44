@@ -174,6 +174,7 @@ declare class GameApp {
     b3: number;
     game: GameLogic;
     grave: boolean;
+    gameStarted: boolean;
     readonly loaded: boolean;
     cameraCenter: Vector3;
     cameraZoom: number;
@@ -184,6 +185,8 @@ declare class GameApp {
     fFurMaxLength: number;
     fKdMix: number;
     fFurGravity: number;
+    musicStarted: boolean;
+    endMusicStarted: boolean;
     player: PhysicsObject;
     parrot: PhysicsObject;
     constants: PhysicsConstants;

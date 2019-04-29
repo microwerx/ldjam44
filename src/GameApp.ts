@@ -27,10 +27,12 @@ class GameApp {
     b3 = 0.0;
     game!: GameLogic;
     grave = false;
+    gameStarted = false;
 
     get loaded(): boolean {
         if (!this.xor.textfiles.loaded) return false;
         else if (!this.xor.fx.textures.loaded) return false;
+        else if (!this.xor.sound.sampler.loaded) return false;
         return true;
     }
 
@@ -46,6 +48,10 @@ class GameApp {
     fFurMaxLength = 1;
     fKdMix = 0.5;
     fFurGravity = 0.0;
+
+    // sound
+    musicStarted = false;
+    endMusicStarted = false;
 
     player: PhysicsObject;
     parrot: PhysicsObject;
@@ -63,12 +69,15 @@ class GameApp {
         hflog.logElement = "log";
         this.xor.graphics.setVideoMode(1.5 * 384, 384);
         this.xor.input.init();
+        this.xor.sound.init();
 
         let fx = this.xor.fluxions;
         fx.textures.load("test", "models/textures/test_texture.png");
         fx.textures.load("test_normal", "models/textures/test_normal_map_dunes.png");
         fx.textures.load("fur1", "images/fur1.png");
         fx.textures.load("furThickness", "models/textures/noise15.png");
+        fx.textures.load("fur", "images/furtexture.jpg");
+        fx.textures.load("kamen", "models/textures/sponza_kamen.png");
         fx.textures.load("grass", "images/grass.png");
         fx.textures.load("grass1", "images/grass1.jpg");
         fx.textures.load("grass2", "images/grass2.jpg");
@@ -83,14 +92,20 @@ class GameApp {
         pbr.addTexture("test", "map_ks");
         pbr.addTexture("test", "map_normal");
         let fur = this.xor.renderconfigs.load('fur', 'shaders/fur.vert', 'shaders/fur.frag');
-        fur.addTexture("test", "map_kd");
+        fur.addTexture("fur", "map_kd");
         fur.addTexture("fur1", "FurTexture");
         fur.addTexture("furThickness", "FurThickness");
 
         this.xor.meshes.load('bunny', 'models/bunny_lores.obj', null, null);
         this.xor.meshes.load('bunnyshell', 'models/bunny_lores_shell.obj', null, null);
         this.xor.meshes.load('bunnypen', 'models/bunnypen.obj', null, null);
-        this.xor.meshes.load('teapot', 'models/teapot.obj', null, null);
+        this.xor.meshes.load('tombstone', 'models/tombstone.obj', null, null);
+
+        let s = this.xor.sound.sampler;
+        s.loadSample(0, "sounds/furtual_rabbit_start.mp3");
+        s.loadSample(1, "sounds/furtual_rabbit_end.mp3");
+        s.loadSample(2, "sounds/furtual_rabbit_main.mp3");
+        s.loadSample(3, "sounds/Snare1.wav");
 
         this.initControls();
     }
@@ -128,6 +143,7 @@ class GameApp {
 
     start() {
         this.reset();
+        this.xor.sound.sampler.playSample(0);
         this.mainloop();
     }
 
@@ -224,9 +240,28 @@ class GameApp {
         this.sunAz = 45.0;
         this.sunPitch = 45.0;
         this.grave = false;
+        this.gameStarted = false;
+
+        this.musicStarted = false;
+        this.endMusicStarted = false;    
+
+        // reset audio
+        this.xor.sound.sampler.playSample(0);
     }
 
     updateGame() {
+        if (this.game.t1 > this.xor.t1) return;
+        if (this.xor.sound.sampler.isPlaying(0)) return;
+        if (!this.gameStarted) {
+            this.gameStarted = true;
+            this.game = new GameLogic(this.xor.t1);
+            this.xor.sound.sampler.playSample(2);
+            return;
+        }
+        if (this.xor.sound.sampler.isStopped(2)) {
+            this.xor.sound.sampler.playSample(2);
+            this.musicStarted = true;
+        }
         this.game.update(this.xor.t1, this.xor.dt);
     }
 
@@ -241,6 +276,11 @@ class GameApp {
         this.player.bound(-4.5, 4.5, 0.0, 2.0);
 
         if (this.game.life < 0) {
+            if (!this.endMusicStarted) {
+                this.endMusicStarted = true;
+                this.xor.sound.sampler.stopSample(2);
+                this.xor.sound.sampler.playSample(1);
+            }
             let amount = GTE.clamp(this.game.life * 0.3, -6, 0);
             if (amount <= -3) {
                 this.grave = true;
@@ -293,18 +333,19 @@ class GameApp {
         let mesh = new Fluxions.FxIndexedGeometryMesh(this.xor.fx);
 
         let w = 10;
-        this.renderBar(mesh, this.game.hayNutrition, 14, w * 1, w);
+        this.renderBar(mesh, this.game.hayNutrition, 15, w * 1, w);
         this.renderBar(mesh, this.game.pelletNutrition, 8, w * 2, w);
         this.renderBar(mesh, this.game.veggieNutrition, 5, w * 3, w);
         this.renderBar(mesh, this.game.treatNutrition, 7, w * 4, w);
         this.renderBar(mesh, this.game.watered, 9, w * 5, w);
         this.renderBar(mesh, this.game.curFur, 12, w * 6, w);
-        this.renderBar(mesh, this.game.woolQuality, 4, w * 7, w);
-        this.renderBar(mesh, this.game.health, 11, w * 8, w);
-        this.renderBar(mesh, this.game.exercised, 13, w * 9, w);
+        this.renderBar(mesh, this.game.brushed, 11, w * 8, w);
+        this.renderBar(mesh, this.game.cleaned, 14, w * 7, w);
         // this.renderBar(mesh, this.game.money / 100, 13, xor.graphics.width - w * 2, w);
         // this.renderBar(mesh, this.game.hayUnits / 100, 13, xor.graphics.width - w * 3, w);
-        this.renderBar(mesh, this.game.life / (5 * 365), 4, xor.graphics.width - w * 2, w * 2);
+        this.renderBar(mesh, this.game.life / (5 * 365), 4, xor.graphics.width - w * 2, w);
+        this.renderBar(mesh, this.game.health, 11, xor.graphics.width - w * 3, w);
+        this.renderBar(mesh, this.game.exercised, 13, xor.graphics.width - w * 4, w);
 
         let pmatrix = Matrix4.makeOrtho2D(0, xor.graphics.width, 0, xor.graphics.height);
         let cmatrix = Matrix4.makeIdentity();
@@ -344,19 +385,23 @@ class GameApp {
             rc.uniform3f("kd", xor.palette.getColor(3));
 
             // render player
-            this.setMaterial(rc, "fur1", "FurTexture", -1);
-            rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);
             if (this.grave) {
-                xor.meshes.render('teapot', rc);
+                let m = Matrix4.makeTranslation3(this.player.position);
+                m.rotate(90, 0, 1, 0);
+                rc.uniformMatrix4f('WorldMatrix', m);
+                this.setMaterial(rc, "kamen", "FurTexture", -1);
+                xor.meshes.render('tombstone', rc);
             } else {
+                rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);
+                this.setMaterial(rc, "fur1", "FurTexture", -1);
                 xor.meshes.render('bunny', rc);
             }
-    }
+        }
 
         rc = xor.renderconfigs.use('fur');
         if (rc) {
             rc.uniform3f("sunDirTo", lmatrix.diag3());
-            this.setMaterial(rc, "test", "map_kd", -1);
+            this.setMaterial(rc, "fur", "map_kd", -1);
             rc.uniform3f("kd", xor.palette.getColor(15));
             rc.uniformMatrix4f('ProjectionMatrix', pmatrix);
             rc.uniformMatrix4f('CameraMatrix', cmatrix);
@@ -366,20 +411,28 @@ class GameApp {
             let m = Matrix4.makeTranslation3(this.player.x);
             rc.uniformMatrix4f('WorldMatrix', m);
 
-            for (let i = 0; i < this.iFurNumLayers; i++) {
-                let curLength = (i + 1) / (this.iFurNumLayers - 1);
-                let gravity = 0.1 * this.game.curFur;//-this.fFurGravity;
-                let displacement = GTE.vec3(0.0, gravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
-                rc.uniform1f("FurMaxLength", this.fFurMaxLength * this.game.fur);
-                rc.uniform1f("FurCurLength", curLength);
-                rc.uniform3f("FurDisplacement", displacement);
-                rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);
-                if (this.grave) {
-                    xor.meshes.render('teapot', rc);
-                } else {
+            if (!this.grave) {
+                for (let i = 0; i < this.iFurNumLayers; i++) {
+                    let curLength = (i + 1) / (this.iFurNumLayers - 1);
+                    let gravity = 0.1 * this.game.curFur;//-this.fFurGravity;
+                    let displacement = GTE.vec3(0.0, gravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
+                    rc.uniform1f("FurMaxLength", this.fFurMaxLength * this.game.fur);
+                    rc.uniform1f("FurCurLength", curLength);
+                    rc.uniform3f("FurDisplacement", displacement);
+                    rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);
                     xor.meshes.render('bunnyshell', rc);
                 }
+            } else {
+                rc.uniform1f("FurMaxLength", 0);
+                rc.uniform1f("FurCurLength", 0);
+                rc.uniform3f("FurDisplacement", GTE.vec3());
+                let m = Matrix4.makeTranslation3(this.player.position);
+                m.rotate(90, 0, 1, 0);
+                rc.uniformMatrix4f('WorldMatrix', m);
+                this.setMaterial(rc, "kamen", "map_kd", -1);
+                // xor.meshes.render('tombstone', rc);
             }
+
         }
         xor.renderconfigs.use(null);
 
@@ -458,7 +511,7 @@ var trystartfn: any;
 function start() {
     game = new GameApp();
     game.init();
-    toggle('gamecontrols');
+    // toggle('gamecontrols');
     trystartfn = setInterval(() => {
         trystart();
     }, 250);
@@ -466,12 +519,10 @@ function start() {
 
 function trystart() {
     if (!game.loaded) {
-        hflog.info("loading!");
         return;
     }
-    hflog.info("starting!");
     clearInterval(trystartfn);
     game.start();
 }
 
-toggle('gamecontrols');
+// toggle('gamecontrols');

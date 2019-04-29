@@ -38,7 +38,7 @@ class GameLogic {
     totalWool = 0;
     days = 0;
     t1 = 0;
-    gameSpeed = 5;
+    gameSpeed = 5;    
 
     constructor(public t0: number) {
         this.t1 = t0;
@@ -58,8 +58,8 @@ class GameLogic {
             this.pelletNutrition * 0.2 +
             this.veggieNutrition * 0.1 +
             this.treatNutrition * 0.1 +
-            this.watered + this.exercised,
-            0, 2) * 0.5;
+            this.watered + this.exercised * 2,
+            0, 2) * 0.5;        
 
         // diminish nutrition, water and exercise
         let amount = 0.001 * this.gameSpeed * dt * Math.max(0.01, (3 - this.health));
@@ -68,7 +68,7 @@ class GameLogic {
         this.veggieNutrition = GTE.clamp(this.veggieNutrition - 0.1 * amount, 0, 1);
         this.treatNutrition = GTE.clamp(this.treatNutrition - amount, 0, 1);
         this.watered = GTE.clamp(this.watered - amount, 0, 1);
-        this.exercised = Math.max(0, this.exercised - dt * 0.5);
+        this.exercised = GTE.clamp(this.exercised - dt * 0.5, 0, 1);
 
         // rabbits get dirty and matted
         let dirtify = 0.005 * dt * this.gameSpeed * (0.5 + this.exercised);
@@ -79,11 +79,11 @@ class GameLogic {
         // get about 10 years on this rabbit
         // if all is well! or 5 if not
         let waterPenalty = 0.05 * this.life * dt * ((this.watered < 0.05) ? 1 : 0);
-        this.life -= dt * GTE.clamp(2 - smootherstep(this.health), 1, 2) + waterPenalty;
+        this.life -= dt * GTE.clamp(2 - (this.health), 1, 2) + waterPenalty;
 
         // Fur growth is dependent on health and cleanliness
         this.woolQuality = GTE.clamp(this.brushed * this.cleaned + 0.2, 0, 2);
-        amount = (1 - smootherstep(this.curFur)) * Math.max(0.3, this.woolQuality * this.health);
+        amount = (1 - smootherstep(this.curFur)) * Math.max(0.5, this.woolQuality * this.health);
         let beforeFur = this.curFur;
         this.curFur = GTE.clamp(this.curFur + dt * amount / 90.0, 0, 1);
         this.fur = this.curFur * this.maxFur;
