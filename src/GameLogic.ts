@@ -135,19 +135,19 @@ class GameLogic {
 
     feedHay() {
         let amount = Math.min(1, this.hayUnits);
-        this.hayNutrition = GTE.clamp(this.hayNutrition + amount/10, 0, 1);
+        this.hayNutrition = GTE.clamp(this.hayNutrition + amount/3, 0, 1);
         this.hayUnits -= amount;
     }
 
     feedPellets() {
         let amount = Math.min(1, this.pelletUnits);
-        this.pelletNutrition = GTE.clamp(this.pelletNutrition + amount/10, 0, 1);
+        this.pelletNutrition = GTE.clamp(this.pelletNutrition + amount/3, 0, 1);
         this.pelletUnits -= amount;
     }
 
     feedVeggies() {
         let amount = Math.min(1, this.veggieUnits);
-        this.veggieNutrition = GTE.clamp(this.veggieNutrition + amount/10, 0, 1);
+        this.veggieNutrition = GTE.clamp(this.veggieNutrition + amount/3, 0, 1);
         this.veggieUnits -= amount;
     }
 

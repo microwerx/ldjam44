@@ -263,7 +263,7 @@ class GameApp {
             //this.xor.sound.sampler.playSample(3);
             return;
         }
-        if (this.xor.sound.sampler.isStopped(2)) {
+        if (this.game.life > 0 && this.xor.sound.sampler.isStopped(2)) {
             this.xor.sound.sampler.playSample(2);
             this.musicStarted = true;
         }

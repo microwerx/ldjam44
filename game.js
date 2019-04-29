@@ -370,17 +370,17 @@ class GameLogic {
     }
     feedHay() {
         let amount = Math.min(1, this.hayUnits);
-        this.hayNutrition = GTE.clamp(this.hayNutrition + amount / 10, 0, 1);
+        this.hayNutrition = GTE.clamp(this.hayNutrition + amount / 3, 0, 1);
         this.hayUnits -= amount;
     }
     feedPellets() {
         let amount = Math.min(1, this.pelletUnits);
-        this.pelletNutrition = GTE.clamp(this.pelletNutrition + amount / 10, 0, 1);
+        this.pelletNutrition = GTE.clamp(this.pelletNutrition + amount / 3, 0, 1);
         this.pelletUnits -= amount;
     }
     feedVeggies() {
         let amount = Math.min(1, this.veggieUnits);
-        this.veggieNutrition = GTE.clamp(this.veggieNutrition + amount / 10, 0, 1);
+        this.veggieNutrition = GTE.clamp(this.veggieNutrition + amount / 3, 0, 1);
         this.veggieUnits -= amount;
     }
     feedTreats() {
@@ -659,7 +659,7 @@ class GameApp {
             //this.xor.sound.sampler.playSample(3);
             return;
         }
-        if (this.xor.sound.sampler.isStopped(2)) {
+        if (this.game.life > 0 && this.xor.sound.sampler.isStopped(2)) {
             this.xor.sound.sampler.playSample(2);
             this.musicStarted = true;
         }
