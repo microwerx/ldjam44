@@ -833,6 +833,11 @@ class GameApp {
         });
     }
     /* Buttons from main page */
+    setSpeed(speed) {
+        if (!this.game)
+            return;
+        this.game.gameSpeed = GTE.clamp(speed, 0.1, 10);
+    }
     feedHay() {
         this.game.feedHay();
     }

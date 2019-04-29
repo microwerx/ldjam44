@@ -209,6 +209,7 @@ declare class GameApp {
     rendergui(): void;
     render(): void;
     mainloop(): void;
+    setSpeed(speed: number): void;
     feedHay(): void;
     feedPellets(): void;
     feedVeggies(): void;
