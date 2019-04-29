@@ -65,7 +65,7 @@ class GameLogic {
             this.watered,
             0, 2);
 
-        const exerciseDays = 30;
+        const exerciseDays = 10;
         const waterDays = 30;
         const hayDays = 70;
         const pelletDays = 100;
@@ -95,7 +95,7 @@ class GameLogic {
         if (this.life > 0) {
             this.life -= dt * GTE.clamp(2 - this.health - 0.3 * this.exercised, 1, 2) + waterPenalty;
         } else {
-            this.life -= 2 * dt;
+            this.life -= 2 * deltaTime;
             return;
         }
 
@@ -110,7 +110,7 @@ class GameLogic {
     }
 
     exercise(distance: number) {
-        this.exercised = GTE.clamp(this.exercised + distance, 0, 1);
+        this.exercised = GTE.clamp(this.exercised + GTE.clamp(distance, 0, 1) / 10, 0, 1);
     }
 
     groom() {

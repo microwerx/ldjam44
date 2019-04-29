@@ -129,7 +129,7 @@ class GameApp {
 
     syncLabels() {
         setSpan("totalMoney", this.game.money.toFixed(2));
-        setSpan("totalDays", this.game.days.toFixed(2) + "/" + this.game.totalWool.toFixed(2) + "oz" + "/" + this.game.totalMoney.toFixed(2));
+        setSpan("totalDays", this.game.days.toFixed(1) + " / " + this.game.totalWool.toFixed(1) + " oz / $" + this.game.totalMoney.toFixed(2));
         setSpan("totalWool", this.game.wool.toFixed(2));
         setSpan("woolMarket", this.game.woolMarketValue.toFixed(2));
         setSpan("hayUnits", this.game.hayUnits.toFixed(2));
@@ -255,31 +255,27 @@ class GameApp {
 
     updateGame() {
         if (this.game.t1 > this.xor.t1) return;
-        // if (this.xor.sound.sampler.isPlaying(0) && this.) return;
         if (!this.gameStarted) {
             this.gameStarted = true;
             this.game = new GameLogic(this.xor.t1, this.initialSpeed);
-            this.xor.sound.sampler.playSample(2);
-            //this.xor.sound.sampler.playSample(3);
             return;
         }
         if (this.game.life > 0 && this.xor.sound.sampler.isStopped(2)) {
+            this.xor.sound.sampler.stopSample(0);
+            this.xor.sound.sampler.stopSample(1);
             this.xor.sound.sampler.playSample(2);
             this.musicStarted = true;
+        } else if (this.game.life <= 0 && this.musicStarted) {
+            this.xor.sound.sampler.stopSample(2);
+            this.musicStarted = false;
         }
+        this.game.gameSpeed = this.initialSpeed;
         this.game.update(this.xor.t1, this.xor.dt);
     }
 
     updatePlayer(dt: number) {
         const turnSpeed = 50;
         const moveSpeed = 5;
-
-        this.player.accelerations = [
-            GTE.vec3(0.0, -this.joyMoveZ * this.constants.g * 2, 0.0),
-            GTE.vec3(0.0 * this.joyMoveX * 10.0, 0.0, 0.0),
-        ];
-        this.player.update(dt, this.constants);
-        this.player.bound(-4.5, 4.5, 0.0, 2.0);
 
         if (this.game.life < 0) {
             if (!this.endMusicStarted) {
@@ -325,6 +321,13 @@ class GameApp {
         this.player.worldMatrix.rotate(turnSpeed * turnY * dt, 0, 1, 0);
         this.player.worldMatrix.translate(0, 0, moveZ * dt);
         this.player.x.reset();
+
+        this.player.accelerations = [
+            GTE.vec3(0.0, -this.joyMoveZ * this.constants.g * 2, 0.0),
+        ];
+        this.player.update(dt, this.constants);
+        this.player.bound(-4.5, 4.5, 0.0, 2.0);
+
         let X1 = this.player.position;
         this.game.exercise(X0.distance(X1));
     }
@@ -428,7 +431,7 @@ class GameApp {
                 rc.uniform1f("map_kd_mix", 1 - this.game.cleaned);
                 for (let i = 0; i < this.iFurNumLayers; i++) {
                     let curLength = (i + 1) / (this.iFurNumLayers - 1);
-                    let gravity = 0.1 * (this.game.curFur * this.game.brushed);//-this.fFurGravity;
+                    let gravity = 0.1 * (this.game.curFur * this.game.brushed);
                     let displacement = GTE.vec3(0.0, gravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
                     rc.uniform1f("FurMaxLength", this.fFurMaxLength * (0.1 + this.game.fur));
                     rc.uniform1f("FurCurLength", curLength);
@@ -459,9 +462,9 @@ class GameApp {
             self.xor.startFrame(t);
             let dt = Math.min(0.016666, self.xor.dt);
             if (self.xor.dt > 0.033333) {
-                this.iFurNumLayers = GTE.clamp(this.iFurNumLayers * 0.7, 25, 50);
+                self.iFurNumLayers = GTE.clamp(self.iFurNumLayers * 0.7, 25, 50) | 0;
             } else if (self.xor.dt < 0.017) {
-                this.iFurNumLayers = GTE.clamp(this.iFurNumLayers * 1.05, 25, 50);
+                self.iFurNumLayers = GTE.clamp(self.iFurNumLayers * 1.05, 25, 50) | 0;
             }
             self.update(dt);
             self.render();
