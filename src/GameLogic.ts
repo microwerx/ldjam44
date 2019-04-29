@@ -183,7 +183,7 @@ class GameLogic {
         let available = this.money / this.veggieCost;
         let count = Math.min(available, x);
         this.money -= count * this.veggieCost;
-        this.pelletUnits += count;
+        this.veggieUnits += count;
     }
 
     buyTreats(x: number) {

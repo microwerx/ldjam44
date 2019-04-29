@@ -46,7 +46,7 @@ class GameApp {
 
     // fur controls
     iFurNumLayers = 50;
-    fFurMaxLength = 1;
+    fFurMaxLength = 0.1;
     fKdMix = 0.5;
     fFurGravity = 0.0;
 
@@ -68,7 +68,7 @@ class GameApp {
 
     init() {
         hflog.logElement = "log";
-        this.xor.graphics.setVideoMode(640, 512);
+        this.xor.graphics.setVideoMode(512, 384);
         this.xor.input.init();
         this.xor.sound.init();
 
@@ -458,10 +458,10 @@ class GameApp {
         window.requestAnimationFrame((t) => {
             self.xor.startFrame(t);
             let dt = Math.min(0.016666, self.xor.dt);
-            if (dt < self.xor.dt) {
-                this.iFurNumLayers = GTE.clamp(this.iFurNumLayers * 0.7, 3, 50);
+            if (self.xor.dt > 0.033333) {
+                this.iFurNumLayers = GTE.clamp(this.iFurNumLayers * 0.7, 25, 50);
             } else if (self.xor.dt < 0.017) {
-                this.iFurNumLayers = GTE.clamp(this.iFurNumLayers * 1.05, 3, 50);
+                this.iFurNumLayers = GTE.clamp(this.iFurNumLayers * 1.05, 25, 50);
             }
             self.update(dt);
             self.render();
