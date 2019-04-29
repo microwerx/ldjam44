@@ -531,3 +531,7 @@ function trystart() {
 }
 
 // toggle('gamecontrols');
+
+window.addEventListener("dblclick", (ev) => {
+    ev.preventDefault();
+});

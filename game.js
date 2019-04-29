@@ -884,4 +884,7 @@ function trystart() {
     game.start();
 }
 // toggle('gamecontrols');
+window.addEventListener("dblclick", (ev) => {
+    ev.preventDefault();
+});
 //# sourceMappingURL=game.js.map
