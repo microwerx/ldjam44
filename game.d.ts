@@ -142,7 +142,7 @@ declare class GameLogic {
     t1: number;
     realTime: number;
     gameSpeed: number;
-    constructor(t0: number);
+    constructor(t0: number, initialSpeed: number);
     update(t1: number, deltaTime: number): void;
     exercise(distance: number): void;
     groom(): void;
@@ -178,6 +178,7 @@ declare class GameApp {
     game: GameLogic;
     grave: boolean;
     gameStarted: boolean;
+    initialSpeed: number;
     readonly loaded: boolean;
     cameraCenter: Vector3;
     cameraZoom: number;

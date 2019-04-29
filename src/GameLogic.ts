@@ -43,8 +43,9 @@ class GameLogic {
     realTime = 0;
     gameSpeed = 3;
 
-    constructor(public t0: number) {
+    constructor(public t0: number, initialSpeed: number) {
         this.t1 = t0;
+        this.gameSpeed = initialSpeed;
     }
 
     update(t1: number, deltaTime: number) {

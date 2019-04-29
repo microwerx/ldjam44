@@ -252,7 +252,7 @@ class PhysicsConstants {
     }
 }
 class GameLogic {
-    constructor(t0) {
+    constructor(t0, initialSpeed) {
         this.t0 = t0;
         this.hayNutrition = 1.0;
         this.pelletNutrition = 1.0;
@@ -292,6 +292,7 @@ class GameLogic {
         this.realTime = 0;
         this.gameSpeed = 3;
         this.t1 = t0;
+        this.gameSpeed = initialSpeed;
     }
     update(t1, deltaTime) {
         if (t1 < this.t0)
@@ -443,6 +444,7 @@ class GameApp {
         this.b3 = 0.0;
         this.grave = false;
         this.gameStarted = false;
+        this.initialSpeed = 3;
         // camera view
         this.cameraCenter = new Vector3(0, 0, 0);
         this.cameraZoom = 1.0;
@@ -622,6 +624,8 @@ class GameApp {
     }
     update(dt) {
         let xor = this.xor;
+        if (!this.loaded)
+            return;
         this.syncControls();
         this.updateInput(xor);
         this.updatePlayer(dt);
@@ -631,7 +635,7 @@ class GameApp {
     }
     reset() {
         this.xor.t0 = this.xor.t1;
-        this.game = new GameLogic(this.xor.t1 + 5);
+        this.game = new GameLogic(this.xor.t1 + 10, this.initialSpeed);
         this.player.reset(0, 3, 0);
         this.cameraCenter = new Vector3(0, 0, 0);
         this.cameraZoom = 1.0;
@@ -648,12 +652,12 @@ class GameApp {
     updateGame() {
         if (this.game.t1 > this.xor.t1)
             return;
-        if (this.xor.sound.sampler.isPlaying(0))
-            return;
+        // if (this.xor.sound.sampler.isPlaying(0) && this.) return;
         if (!this.gameStarted) {
             this.gameStarted = true;
-            this.game = new GameLogic(this.xor.t1);
+            this.game = new GameLogic(this.xor.t1, this.initialSpeed);
             this.xor.sound.sampler.playSample(2);
+            //this.xor.sound.sampler.playSample(3);
             return;
         }
         if (this.xor.sound.sampler.isStopped(2)) {
@@ -715,10 +719,10 @@ class GameApp {
         rc.bindTextureUniform(uniform, texture, unit);
     }
     renderBar(mesh, value, color, x, w) {
-        mesh.color3(this.xor.palette.calcColor(color, 0, 0, 0, 0, 0));
-        mesh.rect(x, 0, x + 10, value * 100);
         mesh.color3(this.xor.palette.calcColor(color, 0, 4, 0, 0, 0));
         mesh.rect(x, 0, x + 10, 100);
+        mesh.color3(this.xor.palette.calcColor(color, 0, 0, 0, 0, 0));
+        mesh.rect(x, 0, x + 10, value * 100);
     }
     rendergui() {
         let xor = this.xor;
@@ -826,6 +830,12 @@ class GameApp {
         window.requestAnimationFrame((t) => {
             self.xor.startFrame(t);
             let dt = Math.min(0.016666, self.xor.dt);
+            if (dt < self.xor.dt) {
+                this.iFurNumLayers = GTE.clamp(this.iFurNumLayers * 0.7, 3, 50);
+            }
+            else if (self.xor.dt < 0.017) {
+                this.iFurNumLayers = GTE.clamp(this.iFurNumLayers * 1.05, 3, 50);
+            }
             self.update(dt);
             self.render();
             self.rendergui();
@@ -836,7 +846,8 @@ class GameApp {
     setSpeed(speed) {
         if (!this.game)
             return;
-        this.game.gameSpeed = GTE.clamp(speed, 0.1, 10);
+        this.initialSpeed = GTE.clamp(speed, 0.1, 10);
+        this.game.gameSpeed = this.initialSpeed;
     }
     feedHay() {
         this.game.feedHay();

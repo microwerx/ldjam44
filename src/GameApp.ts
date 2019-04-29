@@ -28,6 +28,7 @@ class GameApp {
     game!: GameLogic;
     grave = false;
     gameStarted = false;
+    initialSpeed = 3;
 
     get loaded(): boolean {
         if (!this.xor.textfiles.loaded) return false;
@@ -225,6 +226,7 @@ class GameApp {
 
     update(dt: number) {
         let xor = this.xor;
+        if (!this.loaded) return;
         this.syncControls();
         this.updateInput(xor);
         this.updatePlayer(dt);
@@ -235,7 +237,7 @@ class GameApp {
 
     reset() {
         this.xor.t0 = this.xor.t1;
-        this.game = new GameLogic(this.xor.t1 + 5);
+        this.game = new GameLogic(this.xor.t1 + 10, this.initialSpeed);
         this.player.reset(0, 3, 0);
         this.cameraCenter = new Vector3(0, 0, 0);
         this.cameraZoom = 1.0;
@@ -254,11 +256,12 @@ class GameApp {
 
     updateGame() {
         if (this.game.t1 > this.xor.t1) return;
-        if (this.xor.sound.sampler.isPlaying(0)) return;
+        // if (this.xor.sound.sampler.isPlaying(0) && this.) return;
         if (!this.gameStarted) {
             this.gameStarted = true;
-            this.game = new GameLogic(this.xor.t1);
+            this.game = new GameLogic(this.xor.t1, this.initialSpeed);
             this.xor.sound.sampler.playSample(2);
+            //this.xor.sound.sampler.playSample(3);
             return;
         }
         if (this.xor.sound.sampler.isStopped(2)) {
@@ -331,10 +334,10 @@ class GameApp {
     }
 
     renderBar(mesh: Fluxions.FxIndexedGeometryMesh, value: number, color: number, x: number, w: number) {
-        mesh.color3(this.xor.palette.calcColor(color, 0, 0, 0, 0, 0));
-        mesh.rect(x, 0, x + 10, value * 100);
         mesh.color3(this.xor.palette.calcColor(color, 0, 4, 0, 0, 0));
         mesh.rect(x, 0, x + 10, 100);
+        mesh.color3(this.xor.palette.calcColor(color, 0, 0, 0, 0, 0));
+        mesh.rect(x, 0, x + 10, value * 100);
     }
 
     rendergui() {
@@ -455,6 +458,11 @@ class GameApp {
         window.requestAnimationFrame((t) => {
             self.xor.startFrame(t);
             let dt = Math.min(0.016666, self.xor.dt);
+            if (dt < self.xor.dt) {
+                this.iFurNumLayers = GTE.clamp(this.iFurNumLayers * 0.7, 3, 50);
+            } else if (self.xor.dt < 0.017) {
+                this.iFurNumLayers = GTE.clamp(this.iFurNumLayers * 1.05, 3, 50);
+            }
             self.update(dt);
             self.render();
             self.rendergui();
@@ -466,7 +474,8 @@ class GameApp {
 
     setSpeed(speed: number) {
         if (!this.game) return;
-        this.game.gameSpeed = GTE.clamp(speed, 0.1, 10);
+        this.initialSpeed = GTE.clamp(speed, 0.1, 10);
+        this.game.gameSpeed = this.initialSpeed;
     }
 
     feedHay() {
