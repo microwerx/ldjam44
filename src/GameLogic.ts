@@ -28,17 +28,20 @@ class GameLogic {
     veggieUnits = 10;
     treatUnits = 10;
 
-    hayCost = 1;
-    pelletCost = 1;
-    veggieCost = 1;
+    hayCost = 7;
+    pelletCost = 3;
+    veggieCost = 2;
     treatCost = 1;
 
     money = 10.0;
 
     totalWool = 0;
+    totalWoolMoney = 0;
+    totalMoney = 0;
     days = 0;
     t1 = 0;
-    gameSpeed = 5;    
+    realTime = 0;
+    gameSpeed = 3;
 
     constructor(public t0: number) {
         this.t1 = t0;
@@ -46,53 +49,67 @@ class GameLogic {
 
     update(t1: number, deltaTime: number) {
         if (t1 < this.t0) return;
+        this.realTime += deltaTime;
         let dt = deltaTime * this.gameSpeed;
         this.t1 += dt;
-        if (this.life > 0)
-        {
+        if (this.life > 0) {
             this.days = this.t1 - this.t0;
         }
 
         this.health = GTE.clamp(
             this.hayNutrition * 0.7 +
             this.pelletNutrition * 0.2 +
-            this.veggieNutrition * 0.1 +
+            this.veggieNutrition * 0.2 +
             this.treatNutrition * 0.1 +
-            this.watered + this.exercised * 2,
-            0, 2) * 0.5;        
+            this.watered,
+            0, 2);
+
+        const exerciseDays = 70;
+        const waterDays = 30;
+        const hayDays = 70;
+        const pelletDays = 100;
+        const veggieDays = 100;
+        const treatDays = 30;
+        const brushDays = 70;
+        const cleanDays = 70;
+        const furDays = 90;
 
         // diminish nutrition, water and exercise
-        let amount = 0.001 * this.gameSpeed * dt * Math.max(0.01, (3 - this.health));
-        this.hayNutrition = GTE.clamp(this.hayNutrition - 0.7 * amount, 0, 1);
-        this.pelletNutrition = GTE.clamp(this.pelletNutrition - 0.2 * amount, 0, 1);
-        this.veggieNutrition = GTE.clamp(this.veggieNutrition - 0.1 * amount, 0, 1);
-        this.treatNutrition = GTE.clamp(this.treatNutrition - amount, 0, 1);
-        this.watered = GTE.clamp(this.watered - amount, 0, 1);
-        this.exercised = GTE.clamp(this.exercised - dt * 0.5, 0, 1);
+        this.hayNutrition = GTE.clamp(this.hayNutrition - dt / hayDays, 0, 1);
+        this.pelletNutrition = GTE.clamp(this.pelletNutrition - dt / pelletDays, 0, 1);
+        this.veggieNutrition = GTE.clamp(this.veggieNutrition - dt / veggieDays, 0, 1);
+        this.treatNutrition = GTE.clamp(this.treatNutrition - dt / treatDays, 0, 1);
+        this.watered = GTE.clamp(this.watered - dt / waterDays, 0, 1);
+        this.exercised = GTE.clamp(this.exercised - dt / exerciseDays, 0, 1);
 
         // rabbits get dirty and matted
-        let dirtify = 0.005 * dt * this.gameSpeed * (0.5 + this.exercised);
-        this.brushed = GTE.clamp(this.brushed - dirtify, 0, 1);
-        this.cleaned = GTE.clamp(this.cleaned - 0.55 * dirtify, 0, 1);
+        let dirtify = dt * (0.5 + this.exercised) / cleanDays;
+        this.brushed = GTE.clamp(this.brushed - dirtify - dt / brushDays, 0, 1);
+        this.cleaned = GTE.clamp(this.cleaned - 0.5 * dirtify - dt / cleanDays, 0, 1);
 
         // 2 - this.health means that we should
         // get about 10 years on this rabbit
         // if all is well! or 5 if not
-        let waterPenalty = 0.05 * this.life * dt * ((this.watered < 0.05) ? 1 : 0);
-        this.life -= dt * GTE.clamp(2 - (this.health), 1, 2) + waterPenalty;
+        let waterPenalty = 180 * dt * ((this.watered < 0.05) ? 1 : 0);
+        if (this.life > 0) {
+            this.life -= dt * GTE.clamp(2 - this.health - 0.3 * this.exercised, 1, 2) + waterPenalty;
+        } else {
+            this.life -= 2 * dt;
+            return;
+        }
 
-        // Fur growth is dependent on health and cleanliness
-        this.woolQuality = GTE.clamp(this.brushed * this.cleaned + 0.2, 0, 2);
-        amount = (1 - smootherstep(this.curFur)) * Math.max(0.5, this.woolQuality * this.health);
+        // Fur growth is dependent on health, brushing, and cleanliness
+        this.woolQuality = GTE.clamp(0.333 * (this.brushed * this.cleaned + this.health * this.cleaned + this.health * this.brushed), 0.5, 1);
+        let amount = dt * this.woolQuality / furDays;
         let beforeFur = this.curFur;
-        this.curFur = GTE.clamp(this.curFur + dt * amount / 90.0, 0, 1);
+        this.curFur = GTE.clamp(this.curFur + amount, 0, 1);
         this.fur = this.curFur * this.maxFur;
-        this.woolMarket += dt * this.woolQuality * (this.curFur - beforeFur);
+        this.woolMarket += this.woolQuality * (this.curFur - beforeFur);
         this.woolMarketValue = this.woolMarketBase * this.woolMarket;
     }
 
     exercise(distance: number) {
-        this.exercised = GTE.clamp(this.exercised + distance, 0, 2);
+        this.exercised = GTE.clamp(this.exercised + distance, 0, 1);
     }
 
     groom() {
@@ -103,46 +120,48 @@ class GameLogic {
     }
 
     sell() {
-        this.money += this.wool * this.woolMarketValue;
+        let profit = this.wool * this.woolMarketValue;
+        this.money += profit;
         this.totalWool += this.wool;
+        this.totalMoney += profit;
         this.wool = 0;
         this.woolMarket = 0;
     }
 
     giveWater() {
-        this.watered = GTE.clamp(this.watered + 0.1, 0, 1);
+        this.watered = GTE.clamp(this.watered + 0.6, 0, 1);
     }
 
     feedHay() {
-        let amount = Math.min(0.1, this.hayUnits);
-        this.hayNutrition = GTE.clamp(this.hayNutrition + amount, 0, 1);
+        let amount = Math.min(1, this.hayUnits);
+        this.hayNutrition = GTE.clamp(this.hayNutrition + amount/10, 0, 1);
         this.hayUnits -= amount;
     }
 
     feedPellets() {
-        let amount = Math.min(0.1, this.pelletUnits);
-        this.pelletNutrition = GTE.clamp(this.pelletNutrition + amount, 0, 1);
+        let amount = Math.min(1, this.pelletUnits);
+        this.pelletNutrition = GTE.clamp(this.pelletNutrition + amount/10, 0, 1);
         this.pelletUnits -= amount;
     }
 
     feedVeggies() {
-        let amount = Math.min(0.1, this.veggieUnits);
-        this.veggieNutrition = GTE.clamp(this.veggieNutrition + amount, 0, 1);
+        let amount = Math.min(1, this.veggieUnits);
+        this.veggieNutrition = GTE.clamp(this.veggieNutrition + amount/10, 0, 1);
         this.veggieUnits -= amount;
     }
 
     feedTreats() {
-        let amount = Math.min(0.1, this.treatUnits);
-        this.treatNutrition = GTE.clamp(this.treatNutrition + amount, 0, 1);
+        let amount = Math.min(1, this.treatUnits);
+        this.treatNutrition = GTE.clamp(this.treatNutrition + amount/10, 0, 1);
         this.treatUnits -= amount;
     }
 
     brushBunny() {
-        this.brushed = GTE.clamp(this.brushed + 0.1, 0.1, 2);
+        this.brushed = GTE.clamp(this.brushed + 0.20, 0.0, 1);
     }
 
     cleanArea() {
-        this.cleaned = GTE.clamp(this.cleaned + 0.1, 0.1, 2);
+        this.cleaned = GTE.clamp(this.cleaned + 0.20, 0.0, 1);
     }
 
     buyHay(x: number) {

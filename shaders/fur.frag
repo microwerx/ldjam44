@@ -34,9 +34,10 @@ void main() {
     vec3 color = vec3(0.0);
     if (map_kd_mix > 0.0) {
         vec3 map = texture2D(map_kd, vTexcoord.st).rgb;
-        color += map * map_kd_mix + (1.0 - map_kd_mix) * kd;
+        // color += map * map_kd_mix + (1.0 - map_kd_mix) * kd;
+        color += map * map_kd_mix + (1.0 - map_kd_mix) * vec3(1.0);
     } else {
-        color += kd;
+        color += vec3(1.0);
     }
 
     // get fur

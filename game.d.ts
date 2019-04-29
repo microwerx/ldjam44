@@ -136,8 +136,11 @@ declare class GameLogic {
     treatCost: number;
     money: number;
     totalWool: number;
+    totalWoolMoney: number;
+    totalMoney: number;
     days: number;
     t1: number;
+    realTime: number;
     gameSpeed: number;
     constructor(t0: number);
     update(t1: number, deltaTime: number): void;

@@ -128,7 +128,7 @@ class GameApp {
 
     syncLabels() {
         setSpan("totalMoney", this.game.money.toFixed(2));
-        setSpan("totalDays", this.game.days.toFixed(2) + "/" + this.game.totalWool.toFixed(2) + " ounces");
+        setSpan("totalDays", this.game.days.toFixed(2) + "/" + this.game.totalWool.toFixed(2) + "oz" + "/" + this.game.totalMoney.toFixed(2));
         setSpan("totalWool", this.game.wool.toFixed(2));
         setSpan("woolMarket", this.game.woolMarketValue.toFixed(2));
         setSpan("hayUnits", this.game.hayUnits.toFixed(2));
@@ -143,6 +143,8 @@ class GameApp {
 
     start() {
         this.reset();
+        this.xor.sound.sampler.stopSample(1);
+        this.xor.sound.sampler.stopSample(2);
         this.xor.sound.sampler.playSample(0);
         this.mainloop();
     }
@@ -304,11 +306,11 @@ class GameApp {
         if (t.pressed) {
             turnY += GTE.clamp(t.dx, -1, 1);
             moveZ -= GTE.clamp(t.dy, -1, 1);
-            t.dx = 0;
-            t.dy = 0;
+            // t.dx = 0;
+            // t.dy = 0;
         }
 
-        moveZ = GTE.clamp(moveZ, -1, 1) * (0.5 + this.game.hayNutrition * this.game.watered + this.game.treatNutrition * this.game.watered);
+        moveZ = GTE.clamp(moveZ, -1, 1) * (0.5 + this.game.hayNutrition * this.game.watered + 3 * this.game.treatNutrition);
 
         this.player.worldMatrix.rotate(turnSpeed * turnY * dt, 0, 1, 0);
         this.player.worldMatrix.translate(0, 0, moveZ * dt);
@@ -341,11 +343,11 @@ class GameApp {
         this.renderBar(mesh, this.game.curFur, 12, w * 6, w);
         this.renderBar(mesh, this.game.brushed, 11, w * 8, w);
         this.renderBar(mesh, this.game.cleaned, 14, w * 7, w);
-        // this.renderBar(mesh, this.game.money / 100, 13, xor.graphics.width - w * 2, w);
-        // this.renderBar(mesh, this.game.hayUnits / 100, 13, xor.graphics.width - w * 3, w);
+
         this.renderBar(mesh, this.game.life / (5 * 365), 4, xor.graphics.width - w * 2, w);
         this.renderBar(mesh, this.game.health, 11, xor.graphics.width - w * 3, w);
         this.renderBar(mesh, this.game.exercised, 13, xor.graphics.width - w * 4, w);
+        this.renderBar(mesh, this.game.woolQuality, 3, xor.graphics.width - w * 5, w);
 
         let pmatrix = Matrix4.makeOrtho2D(0, xor.graphics.width, 0, xor.graphics.height);
         let cmatrix = Matrix4.makeIdentity();
@@ -412,17 +414,19 @@ class GameApp {
             rc.uniformMatrix4f('WorldMatrix', m);
 
             if (!this.grave) {
+                rc.uniform1f("map_kd_mix", 1 - this.game.cleaned);
                 for (let i = 0; i < this.iFurNumLayers; i++) {
                     let curLength = (i + 1) / (this.iFurNumLayers - 1);
-                    let gravity = 0.1 * this.game.curFur;//-this.fFurGravity;
+                    let gravity = 0.1 * (this.game.curFur * this.game.brushed);//-this.fFurGravity;
                     let displacement = GTE.vec3(0.0, gravity, 0.0).add(GTE.vec3(0.01 * Math.sin(xor.t1 * 0.5), 0.0, 0.0));
-                    rc.uniform1f("FurMaxLength", this.fFurMaxLength * this.game.fur);
+                    rc.uniform1f("FurMaxLength", this.fFurMaxLength * (0.1 + this.game.fur));
                     rc.uniform1f("FurCurLength", curLength);
                     rc.uniform3f("FurDisplacement", displacement);
                     rc.uniformMatrix4f('WorldMatrix', this.player.worldMatrix);
                     xor.meshes.render('bunnyshell', rc);
                 }
             } else {
+                rc.uniform1f("map_kd_mix", 1);
                 rc.uniform1f("FurMaxLength", 0);
                 rc.uniform1f("FurCurLength", 0);
                 rc.uniform3f("FurDisplacement", GTE.vec3());
@@ -443,7 +447,8 @@ class GameApp {
         let self = this;
         window.requestAnimationFrame((t) => {
             self.xor.startFrame(t);
-            self.update(self.xor.dt);
+            let dt = Math.min(0.016666, self.xor.dt);
+            self.update(dt);
             self.render();
             self.mainloop();
         });
