@@ -542,6 +542,7 @@ class GameApp {
     }
     start() {
         this.reset();
+        this.xor.sound.sampler.stopSample(0);
         this.xor.sound.sampler.stopSample(1);
         this.xor.sound.sampler.stopSample(2);
         this.xor.sound.sampler.playSample(0);
@@ -692,12 +693,14 @@ class GameApp {
         }
         let t = this.xor.input.touches[0];
         if (t.pressed) {
-            turnY += GTE.clamp(t.dx, -1, 1);
-            moveZ -= GTE.clamp(t.dy, -1, 1);
-            // t.dx = 0;
-            // t.dy = 0;
+            turnY += GTE.clamp(t.touchDelta.x / 30, -1, 1);
+            moveZ -= GTE.clamp(t.touchDelta.y / 30, -1, 1);
+            t.dx = t.dx * dt * 0.9;
+            t.dy = t.dy * dt * 0.9;
         }
-        moveZ = GTE.clamp(moveZ, -1, 1) * (0.5 + this.game.hayNutrition * this.game.watered + 3 * this.game.treatNutrition);
+        let speed = (0.5 + this.game.hayNutrition * this.game.watered + 3 * this.game.treatNutrition);
+        turnY = GTE.clamp(turnY, -1, 1) * speed;
+        moveZ = GTE.clamp(moveZ, -5, 5);
         this.player.worldMatrix.rotate(turnSpeed * turnY * dt, 0, 1, 0);
         this.player.worldMatrix.translate(0, 0, moveZ * dt);
         this.player.x.reset();
@@ -884,7 +887,4 @@ function trystart() {
     game.start();
 }
 // toggle('gamecontrols');
-window.addEventListener("dblclick", (ev) => {
-    ev.preventDefault();
-});
 //# sourceMappingURL=game.js.map
