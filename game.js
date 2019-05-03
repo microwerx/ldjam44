@@ -343,7 +343,7 @@ class GameLogic {
             this.life = GTE.clamp(this.life, -0.001, 1e6);
         }
         // Fur growth is dependent on health, brushing, and cleanliness
-        this.woolQuality = GTE.clamp(0.333 * (this.brushed * this.cleaned + this.health * this.cleaned + this.health * this.brushed), 0.5, 1);
+        this.woolQuality = GTE.clamp(0.333 * (this.brushed * this.cleaned + this.health * this.cleaned + this.health * this.brushed), 0.05, 1);
         let amount = dt * this.woolQuality / furDays;
         let beforeFur = this.curFur;
         this.curFur = GTE.clamp(this.curFur + amount, 0, 1);
