@@ -281,7 +281,7 @@ class GameLogic {
         this.pelletUnits = 10;
         this.veggieUnits = 10;
         this.treatUnits = 10;
-        this.hayCost = 3;
+        this.hayCost = 7;
         this.pelletCost = 3;
         this.veggieCost = 2;
         this.treatCost = 1;
