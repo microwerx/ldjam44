@@ -725,10 +725,10 @@ class GameApp {
         alert(url);
     }
     updatePlayer(dt) {
-        const turnSpeed = 50;
+        const turnSpeed = 5;
         const moveSpeed = 5;
         this.player.accelerations = [
-            GTE.vec3(0.0, -this.joyMoveZ * this.constants.g * 2, 0.0),
+            GTE.vec3(0.0, -9.8, 0.0),
         ];
         this.player.update(dt, this.constants);
         this.player.bound(-4.5, 4.5, 0.0, 2.0);
@@ -747,8 +747,8 @@ class GameApp {
         }
         if (this.gameStarted && this.game.life > 0) {
             let X0 = this.player.position;
-            let turnY = -this.joyTurnY;
-            let moveZ = this.joyTurnX;
+            let turnY = -this.joyTurnY - this.joyMoveX;
+            let moveZ = this.joyTurnX + this.joyMoveZ;
             if (this.xor.input.mouse.buttons) {
                 turnY -= GTE.clamp(this.xor.input.mouse.delta.x, -1, 1);
                 moveZ -= GTE.clamp(this.xor.input.mouse.delta.y, -1, 1);
@@ -766,7 +766,7 @@ class GameApp {
                 t.dy = t.dy * dt * 0.9;
             }
             let speed = (1 + this.game.hayNutrition * this.game.watered + 3 * this.game.treatNutrition);
-            turnY = GTE.clamp(turnY, -1, 1) * speed;
+            turnY = GTE.clamp(turnY, -1, 1) * speed * turnSpeed;
             moveZ = GTE.clamp(moveZ, -1, 1) * speed;
             this.player.worldMatrix.rotate(turnSpeed * turnY * dt, 0, 1, 0);
             this.player.worldMatrix.translate(0, 0, moveZ * dt);
