@@ -1,4 +1,4 @@
-/// <reference path="../LibXOR/LibXOR.d.ts" />
+/// <reference path="LibXOR.d.ts" />
 /**
  * Creates a row div with a left and right column. It expects CSS class row, column, left, and right.
  * @param {string} leftContent
@@ -119,11 +119,13 @@ declare class GameLogic {
     fur: number;
     curFur: number;
     maxFur: number;
-    wool: number;
+    woolInOunces: number;
+    groomedWoolInOunces: number;
     woolQuality: number;
-    woolMarketBase: number;
-    woolMarket: number;
-    woolMarketValue: number;
+    woolMarketBaseRate: number;
+    woolValueAtMarket: number;
+    woolAverageValue: number;
+    groomedAverageValue: number;
     life: number;
     health: number;
     hayUnits: number;
@@ -178,7 +180,10 @@ declare class GameApp {
     game: GameLogic;
     grave: boolean;
     gameStarted: boolean;
+    gameInitialized: boolean;
     initialSpeed: number;
+    lbsent: boolean;
+    lbcount: number;
     readonly loaded: boolean;
     cameraCenter: Vector3;
     cameraZoom: number;
@@ -204,6 +209,7 @@ declare class GameApp {
     update(dt: number): void;
     reset(): void;
     updateGame(dt: number): void;
+    postToLeaderboard(): void;
     updatePlayer(dt: number): void;
     setMaterial(rc: Fluxions.FxRenderConfig, texture: string, uniform: string, unit: number): void;
     renderBar(mesh: Fluxions.FxIndexedGeometryMesh, value: number, color: number, x: number, w: number): void;

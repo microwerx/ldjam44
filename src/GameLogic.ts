@@ -11,11 +11,13 @@ class GameLogic {
     fur = 0.0;
     curFur = 0;
     maxFur = 16;
-    wool = 0;
+    woolInOunces = 0;
+    groomedWoolInOunces = 0;
     woolQuality = 1.0;
-    woolMarketBase = 13;
-    woolMarket = 0;
-    woolMarketValue = 0;
+    woolMarketBaseRate = 13;
+    woolValueAtMarket = 0;
+    woolAverageValue = 0;
+    groomedAverageValue = 0;
 
     // Life expectancy is 10 years
     // However, this could be shortened if not
@@ -28,7 +30,7 @@ class GameLogic {
     veggieUnits = 10;
     treatUnits = 10;
 
-    hayCost = 5;
+    hayCost = 3;
     pelletCost = 3;
     veggieCost = 2;
     treatCost = 1;
@@ -106,8 +108,16 @@ class GameLogic {
         let beforeFur = this.curFur;
         this.curFur = GTE.clamp(this.curFur + amount, 0, 1);
         this.fur = this.curFur * this.maxFur;
-        this.woolMarket += this.woolQuality * (this.curFur - beforeFur);
-        this.woolMarketValue = this.woolMarketBase * this.woolMarket;
+        // OLD
+        // this.woolValueAtMarket += this.woolQuality * (this.curFur - beforeFur);
+        // this.woolAverageValue = this.woolMarketBaseRate * this.woolValueAtMarket;
+        // NEW
+        this.woolMarketBaseRate = Math.sin(this.days / 100.0) + 13;
+        this.woolInOunces += (this.curFur - beforeFur) * this.maxFur;        
+        // this.woolValueAtMarket += this.woolMarketBaseRate * (0.05 + this.woolQuality) * (this.curFur - beforeFur);
+        let woolTotal = this.woolInOunces + this.groomedWoolInOunces;
+        this.woolAverageValue = this.woolMarketBaseRate * (0.05 + this.woolQuality);
+        this.groomedAverageValue = this.groomedWoolInOunces <= 0.1 ? 0 : this.woolValueAtMarket / this.groomedWoolInOunces;
     }
 
     exercise(distance: number) {
@@ -118,16 +128,19 @@ class GameLogic {
         let groomAmount = 0.1;
         let before = this.curFur;
         this.curFur = GTE.clamp(this.curFur - groomAmount, 0, 1);
-        this.wool += this.maxFur * (before - this.curFur);
+        let diff = this.maxFur * (before - this.curFur);
+        this.groomedWoolInOunces += diff;
+        this.woolInOunces -= diff;
+        this.woolValueAtMarket += this.woolAverageValue * diff;
     }
 
     sell() {
-        let profit = this.wool * this.woolMarketValue;
-        this.money += profit;
-        this.totalWool += this.wool;
-        this.totalMoney += profit;
-        this.wool = 0;
-        this.woolMarket = 0;
+        // let profit = this.woolInOunces * this.woolAverageValue;
+        this.money += this.woolValueAtMarket;
+        this.totalWool += this.groomedWoolInOunces;
+        this.totalMoney += this.woolValueAtMarket;
+        this.groomedWoolInOunces = 0;
+        this.woolValueAtMarket = 0;
     }
 
     giveWater() {

@@ -265,11 +265,13 @@ class GameLogic {
         this.fur = 0.0;
         this.curFur = 0;
         this.maxFur = 16;
-        this.wool = 0;
+        this.woolInOunces = 0;
+        this.groomedWoolInOunces = 0;
         this.woolQuality = 1.0;
-        this.woolMarketBase = 13;
-        this.woolMarket = 0;
-        this.woolMarketValue = 0;
+        this.woolMarketBaseRate = 13;
+        this.woolValueAtMarket = 0;
+        this.woolAverageValue = 0;
+        this.groomedAverageValue = 0;
         // Life expectancy is 10 years
         // However, this could be shortened if not
         // treated well!
@@ -279,7 +281,7 @@ class GameLogic {
         this.pelletUnits = 10;
         this.veggieUnits = 10;
         this.treatUnits = 10;
-        this.hayCost = 5;
+        this.hayCost = 3;
         this.pelletCost = 3;
         this.veggieCost = 2;
         this.treatCost = 1;
@@ -346,8 +348,16 @@ class GameLogic {
         let beforeFur = this.curFur;
         this.curFur = GTE.clamp(this.curFur + amount, 0, 1);
         this.fur = this.curFur * this.maxFur;
-        this.woolMarket += this.woolQuality * (this.curFur - beforeFur);
-        this.woolMarketValue = this.woolMarketBase * this.woolMarket;
+        // OLD
+        // this.woolValueAtMarket += this.woolQuality * (this.curFur - beforeFur);
+        // this.woolAverageValue = this.woolMarketBaseRate * this.woolValueAtMarket;
+        // NEW
+        this.woolMarketBaseRate = Math.sin(this.days / 100.0) + 13;
+        this.woolInOunces += (this.curFur - beforeFur) * this.maxFur;
+        // this.woolValueAtMarket += this.woolMarketBaseRate * (0.05 + this.woolQuality) * (this.curFur - beforeFur);
+        let woolTotal = this.woolInOunces + this.groomedWoolInOunces;
+        this.woolAverageValue = this.woolMarketBaseRate * (0.05 + this.woolQuality);
+        this.groomedAverageValue = this.groomedWoolInOunces <= 0.1 ? 0 : this.woolValueAtMarket / this.groomedWoolInOunces;
     }
     exercise(distance) {
         this.exercised = GTE.clamp(this.exercised + GTE.clamp(distance, 0, 1) / 10, 0, 1);
@@ -356,15 +366,18 @@ class GameLogic {
         let groomAmount = 0.1;
         let before = this.curFur;
         this.curFur = GTE.clamp(this.curFur - groomAmount, 0, 1);
-        this.wool += this.maxFur * (before - this.curFur);
+        let diff = this.maxFur * (before - this.curFur);
+        this.groomedWoolInOunces += diff;
+        this.woolInOunces -= diff;
+        this.woolValueAtMarket += this.woolAverageValue * diff;
     }
     sell() {
-        let profit = this.wool * this.woolMarketValue;
-        this.money += profit;
-        this.totalWool += this.wool;
-        this.totalMoney += profit;
-        this.wool = 0;
-        this.woolMarket = 0;
+        // let profit = this.woolInOunces * this.woolAverageValue;
+        this.money += this.woolValueAtMarket;
+        this.totalWool += this.groomedWoolInOunces;
+        this.totalMoney += this.woolValueAtMarket;
+        this.groomedWoolInOunces = 0;
+        this.woolValueAtMarket = 0;
     }
     giveWater() {
         this.watered = GTE.clamp(this.watered + 0.6, 0, 1);
@@ -420,7 +433,7 @@ class GameLogic {
         this.treatUnits += count;
     }
 }
-/// <reference path="../../LibXOR/LibXOR.d.ts" />
+/// <reference path="../LibXOR.d.ts" />
 /// <reference path="htmlutils.ts" />
 /// <reference path="math.ts" />
 /// <reference path="PhysicsObject.ts" />
@@ -445,7 +458,10 @@ class GameApp {
         this.b3 = 0.0;
         this.grave = false;
         this.gameStarted = false;
+        this.gameInitialized = false;
         this.initialSpeed = 1;
+        this.lbsent = false;
+        this.lbcount = 0;
         // camera view
         this.cameraCenter = new Vector3(0, 0, 0);
         this.cameraZoom = 1.0;
@@ -460,10 +476,6 @@ class GameApp {
         // sound
         this.musicStarted = false;
         this.endMusicStarted = false;
-        this.xor = new LibXOR("project");
-        this.player = new PhysicsObject();
-        this.parrot = new PhysicsObject();
-        this.constants = new PhysicsConstants();
     }
     get loaded() {
         if (!this.xor.textfiles.loaded)
@@ -475,6 +487,10 @@ class GameApp {
         return true;
     }
     init() {
+        this.xor = new LibXOR("project");
+        this.player = new PhysicsObject();
+        this.parrot = new PhysicsObject();
+        this.constants = new PhysicsConstants();
         hflog.logElement = "log";
         this.xor.graphics.setVideoMode(512, 384);
         this.xor.input.init();
@@ -513,6 +529,7 @@ class GameApp {
         s.loadSample(2, "sounds/furtual_rabbit_main.mp3");
         s.loadSample(3, "sounds/Snare1.wav");
         this.initControls();
+        this.gameInitialized = true;
     }
     initControls() {
         let c = document.getElementById('controls');
@@ -530,10 +547,13 @@ class GameApp {
         // this.fFurGravity = getRangeValue("fFurGravity");
     }
     syncLabels() {
-        setSpan("totalMoney", this.game.money.toFixed(2));
+        let wool = this.game.woolInOunces.toFixed(2) + "/" + this.game.groomedWoolInOunces.toFixed(2);
+        let market = this.game.woolAverageValue.toFixed(2); // + "/" + this.game.groomedAverageValue.toFixed(2);
         setSpan("totalDays", this.game.days.toFixed(1) + " / " + this.game.totalWool.toFixed(1) + " oz / $" + this.game.totalMoney.toFixed(2));
-        setSpan("totalWool", this.game.wool.toFixed(2));
-        setSpan("woolMarket", this.game.woolMarketValue.toFixed(2));
+        setSpan("totalMoney", this.game.money.toFixed(2));
+        setSpan("groomMoney", this.game.woolValueAtMarket.toFixed(2));
+        setSpan("totalWool", wool);
+        setSpan("woolMarket", market);
         setSpan("hayUnits", this.game.hayUnits.toFixed(2));
         setSpan("pelletUnits", this.game.pelletUnits.toFixed(2));
         setSpan("veggieUnits", this.game.veggieUnits.toFixed(2));
@@ -620,9 +640,9 @@ class GameApp {
         this.joyTurn.reset(this.joyTurnX, this.joyTurnY, this.joyTurnZ);
     }
     update(dt) {
-        let xor = this.xor;
         if (!this.loaded)
             return;
+        let xor = this.xor;
         this.syncControls();
         this.updateInput(xor);
         this.updatePlayer(dt);
@@ -631,6 +651,8 @@ class GameApp {
         //this.cameraAzimuth += this.joyTurnY * dt * 25;
     }
     reset() {
+        if (!this.gameInitialized)
+            return;
         this.xor.t0 = this.xor.t1;
         this.game = new GameLogic(this.xor.t1 + 10, this.initialSpeed);
         this.player.reset(0, 3, 0);
@@ -643,6 +665,8 @@ class GameApp {
         this.gameStarted = false;
         this.musicStarted = false;
         this.endMusicStarted = false;
+        this.lbcount++;
+        this.lbsent = false;
         // reset audio
         this.xor.sound.sampler.stopSample(0);
         this.xor.sound.sampler.stopSample(1);
@@ -650,7 +674,7 @@ class GameApp {
         this.xor.sound.sampler.playSample(0);
     }
     updateGame(dt) {
-        if (!this.gameStarted && this.game.t1 > this.xor.t1)
+        if (this.game.t1 > this.xor.t1)
             return;
         if (!this.gameStarted) {
             this.gameStarted = true;
@@ -671,6 +695,34 @@ class GameApp {
         }
         this.game.gameSpeed = this.initialSpeed;
         this.game.update(this.xor.t1, dt);
+        if (this.grave && !this.lbsent) {
+            this.postToLeaderboard();
+        }
+    }
+    postToLeaderboard() {
+        if (this.lbsent)
+            return;
+        if (window.location.href != "https://www.mfactorgames.com")
+            return;
+        this.lbsent = true;
+        let gl = this.xor.fx.gl;
+        let debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        let vendor = debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : "VENDOR";
+        let renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "RENDERER";
+        let xhr = new XMLHttpRequest();
+        let url = "https://www.mfactorgames.com/games/ldjam44/leaderboard.php?add";
+        url += "&bunnyName=TEST";
+        url += "&totalDays=" + this.game.days.toFixed(2);
+        url += "&totalWool=" + this.game.totalWool.toFixed(2);
+        url += "&totalMoney=" + this.game.totalMoney.toFixed(2);
+        url += "&dtg=" + new Date().toISOString();
+        url += "&meta=" + vendor + " " + renderer;
+        xhr.open("GET", url);
+        xhr.addEventListener("load", (ev) => {
+            hflog.info("LB got back => ", xhr.responseText);
+        });
+        xhr.send();
+        alert(url);
     }
     updatePlayer(dt) {
         const turnSpeed = 50;
@@ -693,33 +745,35 @@ class GameApp {
             }
             this.player.worldMatrix.translate(0, amount, 0);
         }
-        let X0 = this.player.position;
-        let turnY = -this.joyTurnY;
-        let moveZ = this.joyTurnX;
-        if (this.xor.input.mouse.buttons) {
-            turnY -= GTE.clamp(this.xor.input.mouse.delta.x, -1, 1);
-            moveZ -= GTE.clamp(this.xor.input.mouse.delta.y, -1, 1);
-            this.xor.input.mouse.delta.reset(0, 0);
-        }
-        let t = this.xor.input.touches[0];
-        if (t.pressed) {
-            if (Math.abs(t.touchDelta.x) > 30) {
-                turnY += GTE.clamp(t.touchDelta.x / 30, -1, 1);
+        if (this.gameStarted && this.game.life > 0) {
+            let X0 = this.player.position;
+            let turnY = -this.joyTurnY;
+            let moveZ = this.joyTurnX;
+            if (this.xor.input.mouse.buttons) {
+                turnY -= GTE.clamp(this.xor.input.mouse.delta.x, -1, 1);
+                moveZ -= GTE.clamp(this.xor.input.mouse.delta.y, -1, 1);
+                this.xor.input.mouse.delta.reset(0, 0);
             }
-            if (Math.abs(t.touchDelta.y) > 30) {
-                moveZ -= GTE.clamp(t.touchDelta.y / 30, -1, 1);
+            let t = this.xor.input.touches[0];
+            if (t.pressed) {
+                if (Math.abs(t.touchDelta.x) > 30) {
+                    turnY += GTE.clamp(t.touchDelta.x / 30, -1, 1);
+                }
+                if (Math.abs(t.touchDelta.y) > 30) {
+                    moveZ -= GTE.clamp(t.touchDelta.y / 30, -1, 1);
+                }
+                t.dx = t.dx * dt * 0.9;
+                t.dy = t.dy * dt * 0.9;
             }
-            t.dx = t.dx * dt * 0.9;
-            t.dy = t.dy * dt * 0.9;
+            let speed = (1 + this.game.hayNutrition * this.game.watered + 3 * this.game.treatNutrition);
+            turnY = GTE.clamp(turnY, -1, 1) * speed;
+            moveZ = GTE.clamp(moveZ, -1, 1) * speed;
+            this.player.worldMatrix.rotate(turnSpeed * turnY * dt, 0, 1, 0);
+            this.player.worldMatrix.translate(0, 0, moveZ * dt);
+            this.player.x.reset();
+            let X1 = this.player.position;
+            this.game.exercise(X0.distance(X1));
         }
-        let speed = (1 + this.game.hayNutrition * this.game.watered + 3 * this.game.treatNutrition);
-        turnY = GTE.clamp(turnY, -1, 1) * speed;
-        moveZ = GTE.clamp(moveZ, -1, 1) * speed;
-        this.player.worldMatrix.rotate(turnSpeed * turnY * dt, 0, 1, 0);
-        this.player.worldMatrix.translate(0, 0, moveZ * dt);
-        this.player.x.reset();
-        let X1 = this.player.position;
-        this.game.exercise(X0.distance(X1));
     }
     setMaterial(rc, texture, uniform, unit) {
         rc.bindTextureUniform(uniform, texture, unit);
@@ -740,10 +794,10 @@ class GameApp {
         this.renderBar(mesh, this.game.treatNutrition, 7, w * 4, w);
         this.renderBar(mesh, this.game.watered, 9, w * 5, w);
         this.renderBar(mesh, this.game.curFur, 12, w * 6, w);
-        this.renderBar(mesh, this.game.brushed, 11, w * 8, w);
-        this.renderBar(mesh, this.game.cleaned, 14, w * 7, w);
+        this.renderBar(mesh, this.game.brushed, 11, w * 7, w);
+        this.renderBar(mesh, this.game.cleaned, 14, w * 8, w);
         this.renderBar(mesh, this.game.life / (5 * 365), 4, xor.graphics.width - w * 2, w);
-        this.renderBar(mesh, this.game.health, 11, xor.graphics.width - w * 3, w);
+        this.renderBar(mesh, this.game.health * 0.5, 11, xor.graphics.width - w * 3, w);
         this.renderBar(mesh, this.game.exercised, 13, xor.graphics.width - w * 4, w);
         this.renderBar(mesh, this.game.woolQuality, 3, xor.graphics.width - w * 5, w);
         let pmatrix = Matrix4.makeOrtho2D(0, xor.graphics.width, 0, xor.graphics.height);
@@ -850,58 +904,83 @@ class GameApp {
     }
     /* Buttons from main page */
     setSpeed(speed) {
-        if (!this.game)
+        if (!this.game || !this.gameStarted || this.grave)
             return;
         this.initialSpeed = GTE.clamp(speed, 0.1, 100);
         this.game.gameSpeed = this.initialSpeed;
     }
     feedHay() {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.feedHay();
     }
     feedPellets() {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.feedPellets();
     }
     feedVeggies() {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.feedVeggies();
     }
     feedTreats() {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.feedTreats();
     }
     water() {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.giveWater();
     }
     groom() {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.groom();
         hflog.info("fur: " + this.game.curFur);
     }
     brushBunny() {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.brushBunny();
     }
     cleanArea() {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.cleanArea();
     }
     sell() {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.sell();
     }
     buyHay(x) {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.buyHay(x);
     }
     buyPellets(x) {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.buyPellets(x);
     }
     buyVeggies(x) {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.buyVeggies(x);
     }
     buyTreats(x) {
+        if (!this.game || !this.gameStarted || this.grave)
+            return;
         this.game.buyTreats(x);
     }
 }
 var game;
 var trystartfn;
+game = new GameApp();
 function start() {
-    game = new GameApp();
     game.init();
-    // toggle('gamecontrols');
     trystartfn = setInterval(() => {
         trystart();
     }, 250);
@@ -913,5 +992,4 @@ function trystart() {
     clearInterval(trystartfn);
     game.start();
 }
-// toggle('gamecontrols');
 //# sourceMappingURL=game.js.map

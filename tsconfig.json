@@ -11,8 +11,7 @@
         "declaration": true
     },
     "include": [
-        "src/GameApp.ts",
-        "../LibXOR/LibXOR.d.ts"
+        "src/GameApp.ts"
     ],
     "exclude": [
         "node_modules",

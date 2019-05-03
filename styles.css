@@ -207,26 +207,33 @@ em {
 
 .tmoney {
     color: #d4ab38;
+    font-feature-settings: "tnum";
+    width: 4em;
 }
 
 .twool {
     color: #e40072;
+    font-feature-settings: "tnum";
 }
 
 .thay {
     color: #408040;
+    font-feature-settings: "tnum";
 }
 
 .tpellets {
     color: #00b4b4;
+    font-feature-settings: "tnum";
 }
 
 .tveggies {
     color: #e47200;
+    font-feature-settings: "tnum";
 }
 
 .ttreats {
     color: #00ff00;
+    font-feature-settings: "tnum";
 }
 
 .tpart {
@@ -237,6 +244,12 @@ em {
 .tpartr {
     display: inline-block;
     width: 5em;
+    text-align: right;
+}
+
+.tpartr2 {
+    display: inline-block;
+    width: 4em;
     text-align: right;
 }
 
